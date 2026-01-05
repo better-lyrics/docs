@@ -1,0 +1,179 @@
+---
+import DocsLayout from '../../layouts/DocsLayout.astro';
+---
+
+<DocsLayout title="Rate limiting">
+  <p>
+    The API implements a <strong>two-tier rate limiting system</strong> that provides graceful degradation under load.
+    When the normal rate limit is exceeded, cached responses can still be served at a higher rate.
+  </p>
+
+  <h2>How it works</h2>
+  <div class="tier-diagram">
+    <div class="tier">
+      <div class="tier-header">
+        <span class="tier-badge normal">Tier 1: Normal</span>
+      </div>
+      <p>Standard rate limit for all requests. Can fetch fresh lyrics or serve from cache.</p>
+      <ul>
+        <li>Default: 2 requests/second</li>
+        <li>Burst: 5 requests</li>
+      </ul>
+    </div>
+    <div class="tier-arrow">When exceeded</div>
+    <div class="tier">
+      <div class="tier-header">
+        <span class="tier-badge cached">Tier 2: Cached</span>
+      </div>
+      <p>Higher rate limit, but only serves cached responses. Fresh fetches return 429.</p>
+      <ul>
+        <li>Default: 10 requests/second</li>
+        <li>Burst: 20 requests</li>
+      </ul>
+    </div>
+    <div class="tier-arrow">When exceeded</div>
+    <div class="tier">
+      <div class="tier-header">
+        <span class="tier-badge exceeded">Rate limited</span>
+      </div>
+      <p>All requests return 429 Too Many Requests.</p>
+    </div>
+  </div>
+
+  <h2>Rate limit headers</h2>
+  <p>Every response includes rate limit information:</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Header</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>X-RateLimit-Limit</code></td>
+        <td>Maximum requests allowed in the current tier</td>
+      </tr>
+      <tr>
+        <td><code>X-RateLimit-Remaining</code></td>
+        <td>Requests remaining before hitting the limit</td>
+      </tr>
+      <tr>
+        <td><code>X-RateLimit-Type</code></td>
+        <td>Current tier: <code>normal</code>, <code>cached</code>, <code>exceeded</code>, or <code>bypass</code></td>
+      </tr>
+      <tr>
+        <td><code>Retry-After</code></td>
+        <td>Seconds to wait before retrying (only when rate limited)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Rate limit types</h2>
+
+  <h3><code>normal</code></h3>
+  <p>Request processed normally. Can fetch fresh lyrics or serve from cache.</p>
+
+  <h3><code>cached</code></h3>
+  <p>
+    Normal tier exceeded. Request will only be served if data is cached.
+    If the requested lyrics are not cached, returns 429.
+  </p>
+
+  <h3><code>exceeded</code></h3>
+  <p>Both tiers exceeded. All requests return 429 Too Many Requests.</p>
+
+  <h3><code>bypass</code></h3>
+  <p>Request has a valid API key, rate limits are bypassed entirely.</p>
+
+  <h2>API key bypass</h2>
+  <p>
+    Requests with a valid <code>X-API-Key</code> header bypass all rate limits.
+    This is useful for production applications that need guaranteed access.
+  </p>
+  <pre><code class="language-bash">curl -H "X-API-Key: your-api-key" \
+  "https://lyrics-api.boidu.dev/getLyrics?s=Song&a=Artist"</code></pre>
+  <p>
+    When bypass is active, the response includes:
+  </p>
+  <pre><code class="language-bash">X-RateLimit-Bypass: true
+X-RateLimit-Type: bypass</code></pre>
+
+  <h2>Handling rate limits</h2>
+  <p>When you receive a 429 response:</p>
+  <ol>
+    <li>Check the <code>Retry-After</code> header for when to retry</li>
+    <li>Check <code>X-RateLimit-Type</code> to understand which tier was exceeded</li>
+    <li>If <code>cached</code>, the lyrics might not be in cache yet - try a different song or wait</li>
+    <li>Implement exponential backoff for retries</li>
+  </ol>
+
+  <h2>Rate limit response</h2>
+  <pre><code class="language-json">{`{
+  "error": "Rate limit exceeded. This request requires cached data, but no cache is available for this query.",
+  "message": "Please try again later or reduce your request rate."
+}`}</code></pre>
+  <p>Status: <code>429 Too Many Requests</code></p>
+</DocsLayout>
+
+<style>
+  .tier-diagram {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    margin: var(--space-6) 0;
+  }
+
+  .tier {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+  }
+
+  .tier-header {
+    margin-bottom: var(--space-2);
+  }
+
+  .tier-badge {
+    display: inline-block;
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius-full);
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .tier-badge.normal {
+    background-color: rgba(34, 197, 94, 0.1);
+    color: var(--success);
+  }
+
+  .tier-badge.cached {
+    background-color: rgba(245, 158, 11, 0.1);
+    color: var(--warning);
+  }
+
+  .tier-badge.exceeded {
+    background-color: rgba(239, 68, 68, 0.1);
+    color: var(--error);
+  }
+
+  .tier p {
+    margin: var(--space-2) 0;
+    font-size: 0.9375rem;
+  }
+
+  .tier ul {
+    margin: 0;
+    padding-left: var(--space-5);
+    font-size: 0.875rem;
+    color: var(--text-muted);
+  }
+
+  .tier-arrow {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.8125rem;
+    padding: var(--space-1) 0;
+  }
+</style>

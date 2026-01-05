@@ -1,0 +1,200 @@
+---
+import DocsLayout from '../../layouts/DocsLayout.astro';
+---
+
+<DocsLayout title="Providers">
+  <p>
+    The API supports multiple lyrics providers, each with different strengths and response formats.
+    The default endpoint uses TTML, but you can explicitly choose a provider for specific use cases.
+  </p>
+
+  <h2>Available providers</h2>
+
+  <div class="provider-cards">
+    <div class="provider-card">
+      <div class="provider-header">
+        <h3>TTML</h3>
+        <span class="badge default">Default</span>
+      </div>
+      <p>Syllable-level synchronized lyrics with precise timing data.</p>
+      <table class="provider-details">
+        <tr>
+          <td>Endpoint</td>
+          <td><code>/getLyrics</code> or <code>/ttml/getLyrics</code></td>
+        </tr>
+        <tr>
+          <td>Sync level</td>
+          <td>Syllable</td>
+        </tr>
+        <tr>
+          <td>Best for</td>
+          <td>Karaoke-style display, syllable highlighting</td>
+        </tr>
+        <tr>
+          <td>Response format</td>
+          <td>TTML XML</td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="provider-card">
+      <div class="provider-header">
+        <h3>Kugou</h3>
+      </div>
+      <p>Line-level synchronized lyrics with broad coverage.</p>
+      <table class="provider-details">
+        <tr>
+          <td>Endpoint</td>
+          <td><code>/kugou/getLyrics</code></td>
+        </tr>
+        <tr>
+          <td>Sync level</td>
+          <td>Line</td>
+        </tr>
+        <tr>
+          <td>Best for</td>
+          <td>Line-by-line display, fallback coverage</td>
+        </tr>
+        <tr>
+          <td>Response format</td>
+          <td>LRC-style text</td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="provider-card">
+      <div class="provider-header">
+        <h3>Legacy</h3>
+        <span class="badge deprecated">Deprecated</span>
+      </div>
+      <p>Older provider kept for backwards compatibility.</p>
+      <table class="provider-details">
+        <tr>
+          <td>Endpoint</td>
+          <td><code>/legacy/getLyrics</code></td>
+        </tr>
+        <tr>
+          <td>Sync level</td>
+          <td>Line</td>
+        </tr>
+        <tr>
+          <td>Best for</td>
+          <td>Fallback only</td>
+        </tr>
+        <tr>
+          <td>Response format</td>
+          <td>JSON with lines array</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+  <h2>Choosing a provider</h2>
+  <p>Use the default TTML provider unless you have specific needs:</p>
+  <ul>
+    <li><strong>TTML</strong> - Best overall coverage and precision. Use for karaoke-style syllable highlighting.</li>
+    <li><strong>Kugou</strong> - Line-level sync with broad coverage. Use if TTML returns no results.</li>
+    <li><strong>Legacy</strong> - Avoid unless you have existing code depending on its format.</li>
+  </ul>
+
+  <h2>Response differences</h2>
+
+  <h3>TTML response</h3>
+  <pre><code class="language-json">{`{
+  "ttml": "<?xml version=\\"1.0\\"?>..."
+}`}</code></pre>
+
+  <h3>Kugou/Legacy response</h3>
+  <pre><code class="language-json">{`{
+  "lyrics": "[00:12.34]First line of lyrics\\n[00:15.67]Second line...",
+  "provider": "kugou"
+}`}</code></pre>
+
+  <h2>Provider-specific headers</h2>
+  <p>The <code>X-Provider</code> header indicates which provider served the response:</p>
+  <pre><code>X-Provider: ttml</code></pre>
+
+  <h2>Cache isolation</h2>
+  <p>
+    Each provider has its own cache namespace. A song cached via TTML will not be served
+    when requesting via Kugou, and vice versa. This ensures you always get the format you expect.
+  </p>
+  <p>Cache key prefixes:</p>
+  <ul>
+    <li><code>ttml_lyrics:</code> - TTML provider</li>
+    <li><code>kugou_lyrics:</code> - Kugou provider</li>
+    <li><code>legacy_lyrics:</code> - Legacy provider</li>
+  </ul>
+</DocsLayout>
+
+<style>
+  .provider-cards {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    margin: var(--space-6) 0;
+  }
+
+  .provider-card {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-5);
+  }
+
+  .provider-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin-bottom: var(--space-2);
+  }
+
+  .provider-header h3 {
+    margin: 0;
+    font-size: 1.125rem;
+  }
+
+  .badge {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .badge.default {
+    background-color: rgba(34, 197, 94, 0.1);
+    color: var(--success);
+  }
+
+  .badge.deprecated {
+    background-color: rgba(245, 158, 11, 0.1);
+    color: var(--warning);
+  }
+
+  .provider-card > p {
+    margin: 0 0 var(--space-4);
+    color: var(--text-secondary);
+    font-size: 0.9375rem;
+  }
+
+  .provider-details {
+    font-size: 0.875rem;
+    margin: 0;
+  }
+
+  .provider-details td {
+    padding: var(--space-2) var(--space-3);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .provider-details td:first-child {
+    color: var(--text-muted);
+    width: 120px;
+  }
+
+  .provider-details tr:last-child td {
+    border-bottom: none;
+  }
+</style>

@@ -1,0 +1,169 @@
+---
+import DocsLayout from '../../layouts/DocsLayout.astro';
+---
+
+<DocsLayout title="GET /revalidate">
+  <p class="endpoint-badge">
+    <span class="method">GET</span>
+    <code>/revalidate</code>
+  </p>
+
+  <p>
+    Force refresh cached lyrics for a song. Requires a valid API key.
+    Use this to update stale cache entries or retry after negative cache.
+  </p>
+
+  <h2>Parameters</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Type</th>
+        <th>Required</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>s</code>, <code>song</code>, <code>songName</code></td>
+        <td>string</td>
+        <td>Yes</td>
+        <td>Song title</td>
+      </tr>
+      <tr>
+        <td><code>a</code>, <code>artist</code>, <code>artistName</code></td>
+        <td>string</td>
+        <td>Yes</td>
+        <td>Artist name</td>
+      </tr>
+      <tr>
+        <td><code>al</code>, <code>album</code>, <code>albumName</code></td>
+        <td>string</td>
+        <td>No</td>
+        <td>Album name</td>
+      </tr>
+      <tr>
+        <td><code>d</code>, <code>duration</code></td>
+        <td>number</td>
+        <td>No</td>
+        <td>Track duration in seconds</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Headers</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Required</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>X-API-Key</code></td>
+        <td>Yes</td>
+        <td>Valid API key for authentication</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Example request</h2>
+  <pre><code class="language-bash">curl -H "X-API-Key: your-api-key" \
+  "https://lyrics-api.boidu.dev/revalidate?s=Shape%20of%20You&a=Ed%20Sheeran"</code></pre>
+
+  <h2>Success response</h2>
+  <p>Status: <code>200 OK</code></p>
+  <pre><code class="language-json">{`{
+  "updated": true,
+  "cacheKey": "ttml_lyrics:shape of you ed sheeran",
+  "wasNegativeCache": false
+}`}</code></pre>
+
+  <h2>Response fields</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Field</th>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>updated</code></td>
+        <td>boolean</td>
+        <td>Whether the cache was updated with new content</td>
+      </tr>
+      <tr>
+        <td><code>cacheKey</code></td>
+        <td>string</td>
+        <td>The cache key that was revalidated</td>
+      </tr>
+      <tr>
+        <td><code>wasNegativeCache</code></td>
+        <td>boolean</td>
+        <td>Whether the previous entry was a negative cache (no lyrics found)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>When to use</h2>
+  <ul>
+    <li><strong>Negative cache override</strong> - When you know lyrics now exist for a previously unavailable song</li>
+    <li><strong>Content correction</strong> - When lyrics have been corrected at the source</li>
+    <li><strong>Cache verification</strong> - To ensure you have the latest version</li>
+  </ul>
+
+  <h2>Error responses</h2>
+
+  <h3>Missing API key (401)</h3>
+  <pre><code class="language-json">{`{
+  "error": "API key required for revalidation",
+  "message": "Provide a valid API key via X-API-Key header"
+}`}</code></pre>
+
+  <h3>Missing parameters (400)</h3>
+  <pre><code class="language-json">{`{
+  "error": "song (s) and artist (a) parameters are required"
+}`}</code></pre>
+
+  <h3>Not in cache (404)</h3>
+  <pre><code class="language-json">{`{
+  "error": "no cached lyrics found for this query",
+  "cacheKey": "ttml_lyrics:unknown song artist"
+}`}</code></pre>
+
+  <h2>Notes</h2>
+  <ul>
+    <li>Revalidation fetches fresh data regardless of cache state</li>
+    <li>If lyrics are found, they replace both positive and negative cache entries</li>
+    <li>The <code>updated</code> field is <code>false</code> if content hasn't changed</li>
+    <li>This endpoint always counts against rate limits unless bypassed via API key</li>
+  </ul>
+</DocsLayout>
+
+<style>
+  .endpoint-badge {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin-bottom: var(--space-6);
+  }
+
+  .method {
+    background-color: rgba(34, 197, 94, 0.1);
+    color: var(--success);
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+  }
+
+  .endpoint-badge code {
+    font-size: 1.125rem;
+    background: none;
+    padding: 0;
+  }
+</style>

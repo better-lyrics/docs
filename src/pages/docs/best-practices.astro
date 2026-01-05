@@ -1,0 +1,155 @@
+---
+import DocsLayout from '../../layouts/DocsLayout.astro';
+---
+
+<DocsLayout title="Best practices">
+  <p>
+    Follow these recommendations to get the best results from the API
+    and ensure a good experience for your users.
+  </p>
+
+  <h2>Always include duration</h2>
+  <p>
+    The <code>duration</code> parameter significantly improves matching accuracy.
+    It helps distinguish between:
+  </p>
+  <ul>
+    <li>Radio edits vs album versions</li>
+    <li>Live vs studio recordings</li>
+    <li>Different songs with similar names</li>
+  </ul>
+  <pre><code class="language-bash">{`# Good - includes duration
+/getLyrics?s=Bohemian%20Rhapsody&a=Queen&d=354
+
+# Less accurate - missing duration
+/getLyrics?s=Bohemian%20Rhapsody&a=Queen`}</code></pre>
+  <p>
+    If your application has access to track duration (most music players do),
+    always include it.
+  </p>
+
+  <h2>Normalize input before sending</h2>
+  <p>
+    While the API normalizes input server-side, you can improve cache hit rates
+    by sending consistent input:
+  </p>
+  <ul>
+    <li>Trim leading/trailing whitespace</li>
+    <li>Remove "(Official Video)" or similar suffixes from song names</li>
+    <li>Use the primary artist name, not "feat." artists</li>
+  </ul>
+  <pre><code class="language-javascript">{`// Before
+song = "  Shape of You (Official Video)  "
+artist = "Ed Sheeran feat. Someone"
+
+// After normalization
+song = "Shape of You"
+artist = "Ed Sheeran"`}</code></pre>
+
+  <h2>Implement client-side caching</h2>
+  <p>
+    Reduce API calls by caching responses locally:
+  </p>
+  <pre><code class="language-javascript">{`const lyricsCache = new Map();
+
+async function getLyrics(song, artist, duration) {
+  const key = \`\${song.toLowerCase()}|\${artist.toLowerCase()}|\${duration || ''}\`;
+
+  if (lyricsCache.has(key)) {
+    return lyricsCache.get(key);
+  }
+
+  const result = await fetchFromAPI(song, artist, duration);
+  lyricsCache.set(key, result);
+
+  return result;
+}`}</code></pre>
+  <p>
+    Consider persisting the cache to localStorage or IndexedDB for longer retention.
+  </p>
+
+  <h2>Handle negative cache gracefully</h2>
+  <p>
+    When you receive <code>X-Cache-Status: NEGATIVE_HIT</code>, the API previously
+    searched for this song and found no lyrics. Don't retry immediately.
+  </p>
+  <ul>
+    <li>Store negative results locally to avoid repeat requests</li>
+    <li>Show a "lyrics not available" message to users</li>
+    <li>If you know lyrics should exist, use <code>/revalidate</code> (requires API key)</li>
+  </ul>
+
+  <h2>Respect rate limits</h2>
+  <p>
+    For production applications:
+  </p>
+  <ul>
+    <li>Request an API key for rate limit bypass</li>
+    <li>Implement request queuing to avoid bursts</li>
+    <li>Add delays between batch requests</li>
+    <li>Handle 429 responses with proper backoff</li>
+  </ul>
+
+  <h2>Pre-fetch strategically</h2>
+  <p>
+    If you know what songs will be played next, pre-fetch their lyrics:
+  </p>
+  <ul>
+    <li>Fetch lyrics when a playlist loads, not when each song starts</li>
+    <li>Limit concurrent requests to avoid rate limiting</li>
+    <li>Prioritize songs near the current playback position</li>
+  </ul>
+  <pre><code class="language-javascript">{`// Pre-fetch next 3 songs in playlist
+async function prefetchPlaylist(playlist, currentIndex) {
+  const toFetch = playlist.slice(currentIndex, currentIndex + 3);
+
+  for (const track of toFetch) {
+    // Stagger requests to avoid bursts
+    await fetchLyrics(track.song, track.artist, track.duration);
+    await sleep(200);
+  }
+}`}</code></pre>
+
+  <h2>Parse TTML efficiently</h2>
+  <p>
+    TTML parsing can be expensive. Consider:
+  </p>
+  <ul>
+    <li>Parse once and cache the structured result</li>
+    <li>Use a Web Worker for parsing if it blocks the main thread</li>
+    <li>Pre-compute the next few lines during playback</li>
+  </ul>
+
+  <h2>Handle missing timing gracefully</h2>
+  <p>
+    Some edge cases may have incomplete timing data:
+  </p>
+  <ul>
+    <li>Check that <code>begin</code> and <code>end</code> attributes exist</li>
+    <li>Validate that times are parseable</li>
+    <li>Fall back to line-level display if word timing is missing</li>
+  </ul>
+
+  <h2>Test with edge cases</h2>
+  <p>
+    Test your integration with:
+  </p>
+  <ul>
+    <li>Songs with special characters in names</li>
+    <li>Very long songs (10+ minutes)</li>
+    <li>RTL languages (Arabic, Hebrew)</li>
+    <li>Songs with no lyrics available</li>
+    <li>Songs with instrumental sections</li>
+  </ul>
+
+  <h2>Monitor your usage</h2>
+  <p>
+    Track metrics to optimize your integration:
+  </p>
+  <ul>
+    <li>Cache hit rate (from <code>X-Cache-Status</code> header)</li>
+    <li>Error rate by status code</li>
+    <li>Response times</li>
+    <li>Rate limit encounters</li>
+  </ul>
+</DocsLayout>

@@ -1,0 +1,147 @@
+---
+const currentPath = Astro.url.pathname;
+
+const navLinks = [
+  { href: '/docs/introduction', label: 'Docs' },
+  { href: '/reference/get-lyrics', label: 'Reference' },
+  { href: '/playground', label: 'Playground' },
+];
+
+function isActive(href: string): boolean {
+  if (href === '/docs/introduction') {
+    return currentPath.startsWith('/docs');
+  }
+  if (href === '/reference/get-lyrics') {
+    return currentPath.startsWith('/reference');
+  }
+  return currentPath === href;
+}
+---
+
+<header class="header">
+  <div class="header-content">
+    <a href="/" class="logo">
+      <img src="/favicon.svg" alt="Better Lyrics" width="28" height="28" loading="eager" />
+      <span class="logo-text">Better Lyrics <span class="logo-api">API</span></span>
+    </a>
+
+    <nav class="nav">
+      {navLinks.map(link => (
+        <a
+          href={link.href}
+          class:list={['nav-link', { active: isActive(link.href) }]}
+        >
+          {link.label}
+        </a>
+      ))}
+    </nav>
+
+    <div class="header-actions">
+      <a
+        href="https://better-lyrics.boidu.dev"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="extension-link"
+      >
+        Get the extension
+      </a>
+    </div>
+  </div>
+</header>
+
+<style>
+  .header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background-color: rgba(10, 10, 10, 0.8);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    height: var(--header-height);
+  }
+
+  .header-content {
+    margin: 0;
+    padding: 0 var(--space-6);
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-8);
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    color: var(--text-primary);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 1.0625rem;
+  }
+
+  .logo img {
+    border-radius: var(--radius-sm);
+  }
+
+  .logo-api {
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+
+  .nav {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+  }
+
+  .nav-link {
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-md);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: all var(--transition-fast);
+  }
+
+  .nav-link:hover {
+    color: var(--text-primary);
+    background-color: var(--bg-secondary);
+  }
+
+  .nav-link.active {
+    color: var(--text-primary);
+    background-color: var(--bg-secondary);
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+  }
+
+  .extension-link {
+    padding: var(--space-2) var(--space-4);
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--accent);
+    text-decoration: none;
+    border: 1px solid var(--accent-border);
+    border-radius: var(--radius-full);
+    background-color: var(--accent-subtle);
+    transition: all var(--transition-fast);
+  }
+
+  .extension-link:hover {
+    background-color: var(--accent);
+    border-color: var(--accent);
+    color: white;
+  }
+
+  @media (max-width: 768px) {
+    .nav {
+      display: none;
+    }
+  }
+</style>

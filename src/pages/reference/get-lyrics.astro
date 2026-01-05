@@ -1,0 +1,180 @@
+---
+import DocsLayout from '../../layouts/DocsLayout.astro';
+---
+
+<DocsLayout title="GET /getLyrics">
+  <p class="endpoint-badge">
+    <span class="method">GET</span>
+    <code>/getLyrics</code>
+  </p>
+
+  <p>
+    Fetch synchronized lyrics for a song. Returns syllable-level timing data in TTML format.
+  </p>
+
+  <h2>Parameters</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Type</th>
+        <th>Required</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>s</code>, <code>song</code>, <code>songName</code></td>
+        <td>string</td>
+        <td>Yes</td>
+        <td>Song title</td>
+      </tr>
+      <tr>
+        <td><code>a</code>, <code>artist</code>, <code>artistName</code></td>
+        <td>string</td>
+        <td>Yes</td>
+        <td>Artist name</td>
+      </tr>
+      <tr>
+        <td><code>al</code>, <code>album</code>, <code>albumName</code></td>
+        <td>string</td>
+        <td>No</td>
+        <td>Album name (improves matching)</td>
+      </tr>
+      <tr>
+        <td><code>d</code>, <code>duration</code></td>
+        <td>number</td>
+        <td>No</td>
+        <td>Track duration in seconds (improves matching)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Headers</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Required</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>X-API-Key</code></td>
+        <td>Conditional</td>
+        <td>Required for cache misses (when API key mode is enabled) and rate limit bypass</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Example request</h2>
+  <pre><code class="language-bash">curl "https://lyrics-api.boidu.dev/getLyrics?s=Shape%20of%20You&a=Ed%20Sheeran&d=234"</code></pre>
+
+  <h2>Success response</h2>
+  <p>Status: <code>200 OK</code></p>
+  <pre><code class="language-json">{`{
+  "ttml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\"?>\\n<tt xmlns=\\"http://www.w3.org/ns/ttml\\">\\n  <body>\\n    <div>\\n      <p begin=\\"00:00:18.234\\" end=\\"00:00:21.891\\">\\n        <span begin=\\"00:00:18.234\\" end=\\"00:00:18.567\\">The </span>\\n        ...\\n      </p>\\n    </div>\\n  </body>\\n</tt>",
+  "score": 95
+}`}</code></pre>
+
+  <h2>Response headers</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Header</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>X-Cache-Status</code></td>
+        <td><code>HIT</code>, <code>MISS</code>, <code>NEGATIVE_HIT</code>, or <code>STALE</code></td>
+      </tr>
+      <tr>
+        <td><code>X-Provider</code></td>
+        <td><code>ttml</code></td>
+      </tr>
+      <tr>
+        <td><code>X-RateLimit-Limit</code></td>
+        <td>Maximum requests in current tier</td>
+      </tr>
+      <tr>
+        <td><code>X-RateLimit-Remaining</code></td>
+        <td>Requests remaining</td>
+      </tr>
+      <tr>
+        <td><code>X-RateLimit-Type</code></td>
+        <td><code>normal</code>, <code>cached</code>, <code>exceeded</code>, or <code>bypass</code></td>
+      </tr>
+      <tr>
+        <td><code>X-Auth-Mode</code></td>
+        <td><code>public</code> or <code>cache-first</code></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Error responses</h2>
+
+  <h3>Missing parameters (422)</h3>
+  <pre><code class="language-json">{`{
+  "error": "Song name and artist name are required"
+}`}</code></pre>
+
+  <h3>Not found (404)</h3>
+  <pre><code class="language-json">{`{
+  "error": "Lyrics not available for this track"
+}`}</code></pre>
+
+  <h3>Rate limited (429)</h3>
+  <pre><code class="language-json">{`{
+  "error": "Rate limit exceeded. This request requires cached data, but no cache is available for this query.",
+  "message": "Please try again later or reduce your request rate."
+}`}</code></pre>
+
+  <h3>API key required (401)</h3>
+  <pre><code class="language-json">{`{
+  "error": "API key required",
+  "message": "Uncached queries require a valid API key via X-API-Key header"
+}`}</code></pre>
+
+  <h2>Provider-specific endpoints</h2>
+  <p>
+    You can also use provider-specific endpoints for different lyrics sources:
+  </p>
+  <ul>
+    <li><code>/ttml/getLyrics</code> - Same as <code>/getLyrics</code></li>
+    <li><code>/kugou/getLyrics</code> - Kugou provider (line-level timing)</li>
+    <li><code>/legacy/getLyrics</code> - Legacy provider (deprecated)</li>
+  </ul>
+</DocsLayout>
+
+<style>
+  .endpoint-badge {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin-bottom: var(--space-6);
+  }
+
+  .method {
+    background-color: rgba(34, 197, 94, 0.1);
+    color: var(--success);
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+  }
+
+  .endpoint-badge code {
+    font-size: 1.125rem;
+    background: none;
+    padding: 0;
+  }
+
+  .note {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    font-style: italic;
+  }
+</style>

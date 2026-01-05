@@ -1,0 +1,188 @@
+---
+import DocsLayout from '../../layouts/DocsLayout.astro';
+---
+
+<DocsLayout title="GET /health">
+  <p class="endpoint-badge">
+    <span class="method">GET</span>
+    <code>/health</code>
+  </p>
+
+  <p>
+    Check API health status. Returns basic status for unauthenticated requests,
+    detailed token status for authenticated requests.
+  </p>
+
+  <h2>Headers (optional)</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Required</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>Authorization</code></td>
+        <td>No</td>
+        <td>Cache access token for detailed status</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Example request (basic)</h2>
+  <pre><code class="language-bash">curl "https://lyrics-api.boidu.dev/health"</code></pre>
+
+  <h2>Basic response</h2>
+  <p>Status: <code>200 OK</code></p>
+  <pre><code class="language-json">{`{
+  "status": "ok",
+  "accounts": 2,
+  "circuit_breaker": "CLOSED",
+  "cache_ready": true
+}`}</code></pre>
+
+  <h2>Response fields</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Field</th>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>status</code></td>
+        <td>string</td>
+        <td><code>ok</code>, <code>degraded</code>, or <code>unhealthy</code></td>
+      </tr>
+      <tr>
+        <td><code>accounts</code></td>
+        <td>number</td>
+        <td>Number of configured provider accounts</td>
+      </tr>
+      <tr>
+        <td><code>circuit_breaker</code></td>
+        <td>string</td>
+        <td><code>CLOSED</code>, <code>OPEN</code>, or <code>HALF_OPEN</code></td>
+      </tr>
+      <tr>
+        <td><code>cache_ready</code></td>
+        <td>boolean</td>
+        <td>Whether the cache is initialized and ready</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Status values</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Status</th>
+        <th>Meaning</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>ok</code></td>
+        <td>All systems operational</td>
+      </tr>
+      <tr>
+        <td><code>degraded</code></td>
+        <td>Some functionality limited (e.g., circuit breaker open, tokens expiring)</td>
+      </tr>
+      <tr>
+        <td><code>unhealthy</code></td>
+        <td>Critical issue (e.g., no accounts configured)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Authenticated response</h2>
+  <p>With the <code>Authorization</code> header, additional details are returned:</p>
+  <pre><code class="language-bash">curl -H "Authorization: your-cache-token" \
+  "https://lyrics-api.boidu.dev/health"</code></pre>
+
+  <pre><code class="language-json">{`{
+  "status": "ok",
+  "accounts": 2,
+  "circuit_breaker": "CLOSED",
+  "cache_ready": true,
+  "circuit_breaker_failures": 0,
+  "tokens": [
+    {
+      "name": "account-1",
+      "status": "healthy",
+      "expires": "2025-03-15 12:00:00",
+      "days_remaining": 68
+    },
+    {
+      "name": "account-2",
+      "status": "expiring_soon",
+      "expires": "2025-01-12 08:30:00",
+      "days_remaining": 6
+    }
+  ]
+}`}</code></pre>
+
+  <h2>Token status values</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Status</th>
+        <th>Meaning</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>healthy</code></td>
+        <td>Token valid with more than 7 days remaining</td>
+      </tr>
+      <tr>
+        <td><code>expiring_soon</code></td>
+        <td>Token valid but expiring within 7 days</td>
+      </tr>
+      <tr>
+        <td><code>expired</code></td>
+        <td>Token has expired</td>
+      </tr>
+      <tr>
+        <td><code>error</code></td>
+        <td>Could not determine token status</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Use cases</h2>
+  <ul>
+    <li><strong>Monitoring</strong> - Set up health checks for your integration</li>
+    <li><strong>Debugging</strong> - Verify API is reachable and functioning</li>
+    <li><strong>Status pages</strong> - Display API status in your application</li>
+  </ul>
+</DocsLayout>
+
+<style>
+  .endpoint-badge {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin-bottom: var(--space-6);
+  }
+
+  .method {
+    background-color: rgba(34, 197, 94, 0.1);
+    color: var(--success);
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+  }
+
+  .endpoint-badge code {
+    font-size: 1.125rem;
+    background: none;
+    padding: 0;
+  }
+</style>

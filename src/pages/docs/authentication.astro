@@ -1,0 +1,114 @@
+---
+import DocsLayout from '../../layouts/DocsLayout.astro';
+---
+
+<DocsLayout title="Authentication">
+  <p>
+    The Better Lyrics API uses a <strong>cache-first authentication model</strong>.
+    This means cached responses are always publicly accessible, while fresh fetches may require an API key.
+  </p>
+
+  <h2>When you need an API key</h2>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Scenario</th>
+        <th>API key required?</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Cache hit (lyrics already cached)</td>
+        <td>No</td>
+      </tr>
+      <tr>
+        <td>Cache miss (fresh fetch needed)</td>
+        <td>Yes*</td>
+      </tr>
+      <tr>
+        <td>Revalidation (<code>/revalidate</code> endpoint)</td>
+        <td>Yes</td>
+      </tr>
+      <tr>
+        <td>Rate limit bypass</td>
+        <td>Yes</td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="note">*Only when <code>API_KEY_REQUIRED</code> is enabled on the server. Contact the maintainer for access.</p>
+
+  <h2>Using your API key</h2>
+  <p>Pass your API key in the <code>X-API-Key</code> header:</p>
+  <pre><code class="language-bash">curl -H "X-API-Key: your-api-key" \
+  "https://lyrics-api.boidu.dev/getLyrics?s=Song&a=Artist"</code></pre>
+
+  <h2>API key benefits</h2>
+  <ul>
+    <li><strong>Cache miss access</strong> - Fetch lyrics for songs not yet in the cache</li>
+    <li><strong>Rate limit bypass</strong> - Skip the normal rate limiting entirely</li>
+    <li><strong>Revalidation</strong> - Force refresh cached lyrics with the <code>/revalidate</code> endpoint</li>
+  </ul>
+
+  <h2>Response headers</h2>
+  <p>The API includes authentication-related headers in every response:</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Header</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>X-Auth-Mode</code></td>
+        <td>Current auth mode: <code>public</code> (API key not required) or <code>cache-first</code> (API key required for cache misses)</td>
+      </tr>
+      <tr>
+        <td><code>X-RateLimit-Bypass</code></td>
+        <td>Set to <code>true</code> when rate limits are bypassed via API key</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Error responses</h2>
+
+  <h3>Missing API key (cache miss)</h3>
+  <pre><code class="language-json">{`{
+  "error": "API key required",
+  "message": "Uncached queries require a valid API key via X-API-Key header"
+}`}</code></pre>
+  <p>Status: <code>401 Unauthorized</code></p>
+
+  <h3>Invalid API key</h3>
+  <pre><code class="language-json">{`{
+  "error": "Invalid API key",
+  "message": "The provided API key is not valid"
+}`}</code></pre>
+  <p>Status: <code>401 Unauthorized</code></p>
+
+  <h2>Cache-first model explained</h2>
+  <p>
+    The cache-first model balances accessibility with resource protection:
+  </p>
+  <ol>
+    <li>Request comes in for lyrics</li>
+    <li>API checks if lyrics are already cached</li>
+    <li>If cached: return immediately (no API key needed)</li>
+    <li>If not cached: check for valid API key</li>
+    <li>With valid API key: fetch from source, cache, and return</li>
+    <li>Without API key: return 401 error</li>
+  </ol>
+  <p>
+    This means popular songs that are already cached can be accessed by anyone,
+    while fresh fetches (which consume upstream resources) require authentication.
+  </p>
+</DocsLayout>
+
+<style>
+  .note {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    font-style: italic;
+  }
+</style>

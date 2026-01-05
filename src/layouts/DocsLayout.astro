@@ -1,0 +1,385 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import TableOfContents from '../components/TableOfContents.tsx';
+import Search from '../components/Search.tsx';
+
+interface Props {
+  title: string;
+  description?: string;
+}
+
+const { title, description } = Astro.props;
+const currentPath = Astro.url.pathname;
+
+const conceptsLinks = [
+  { href: '/docs/introduction', label: 'Introduction' },
+  { href: '/docs/authentication', label: 'Authentication' },
+  { href: '/docs/rate-limiting', label: 'Rate limiting' },
+  { href: '/docs/caching', label: 'Caching' },
+  { href: '/docs/providers', label: 'Providers' },
+  { href: '/docs/response-format', label: 'Response format' },
+  { href: '/docs/error-handling', label: 'Error handling' },
+  { href: '/docs/best-practices', label: 'Best practices' },
+];
+
+const referenceLinks = [
+  { href: '/reference/get-lyrics', label: 'GET /getLyrics' },
+  { href: '/reference/revalidate', label: 'GET /revalidate' },
+  { href: '/reference/health', label: 'GET /health' },
+  { href: '/reference/cache-endpoints', label: 'Cache endpoints' },
+];
+---
+
+<BaseLayout title={title} description={description}>
+  <Header />
+
+  <div class="docs-layout">
+    <aside class="sidebar">
+      <nav class="sidebar-nav">
+        <Search client:load />
+
+        <div class="nav-section">
+          <h4 class="nav-section-title">Concepts</h4>
+          <ul class="nav-list">
+            {conceptsLinks.map(link => (
+              <li>
+                <a
+                  href={link.href}
+                  class:list={['nav-item', { active: currentPath === link.href }]}
+                >
+                  {link.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div class="nav-section">
+          <h4 class="nav-section-title">Reference</h4>
+          <ul class="nav-list">
+            {referenceLinks.map(link => (
+              <li>
+                <a
+                  href={link.href}
+                  class:list={['nav-item', { active: currentPath === link.href }]}
+                >
+                  {link.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div class="sidebar-cta">
+          <a href="https://better-lyrics.boidu.dev" target="_blank" rel="noopener noreferrer" class="cta-card">
+            <div class="cta-header">
+              <img src="/favicon.svg" alt="Better Lyrics" width="20" height="20" loading="lazy"  />
+              <span class="cta-title">Better Lyrics</span>
+            </div>
+            <p class="cta-description">Time-synced lyrics, translations, and more for YouTube Music.</p>
+            <span class="cta-link">
+              Install extension
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M5 9L9 5M9 5H5.5M9 5V8.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>
+          </a>
+        </div>
+      </nav>
+    </aside>
+
+    <main class="docs-content">
+      <div class="docs-content-wrapper">
+        <article class="article">
+          <h1>{title}</h1>
+          <slot />
+        </article>
+        <aside class="toc-sidebar">
+          <TableOfContents client:load />
+        </aside>
+      </div>
+    </main>
+  </div>
+
+  <Footer />
+</BaseLayout>
+
+<script>
+  // Use event delegation for headings (IDs are set dynamically by TableOfContents)
+  document.querySelector('.article')?.addEventListener('click', (e) => {
+    const heading = (e.target as Element).closest('h2, h3');
+    if (heading && heading.id) {
+      const url = `${window.location.pathname}#${heading.id}`;
+      window.history.pushState({}, '', url);
+    }
+  });
+</script>
+
+<style>
+  .docs-layout {
+    display: flex;
+    min-height: calc(100vh - var(--header-height));
+  }
+
+  .sidebar {
+    position: sticky;
+    top: var(--header-height);
+    width: var(--sidebar-width);
+    height: calc(100vh - var(--header-height));
+    flex-shrink: 0;
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    background-color: var(--bg-primary);
+  }
+
+  .sidebar-nav {
+    padding: var(--space-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+  }
+
+  .nav-section-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: var(--space-3);
+  }
+
+  .nav-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .nav-item {
+    display: block;
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-md);
+    font-size: 0.9375rem;
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: all var(--transition-fast);
+  }
+
+  .nav-item:hover {
+    color: var(--text-primary);
+    background-color: var(--bg-secondary);
+  }
+
+  .nav-item.active {
+    color: var(--text-primary);
+    background-color: var(--bg-secondary);
+    font-weight: 500;
+  }
+
+  .sidebar-cta {
+    margin-top: auto;
+    padding-top: var(--space-6);
+    border-top: 1px solid var(--border);
+  }
+
+  .cta-card {
+    display: block;
+    padding: var(--space-4);
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    text-decoration: none;
+    transition: all var(--transition-fast);
+  }
+
+  .cta-card:hover {
+    border-color: var(--border-hover);
+  }
+
+  .cta-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-bottom: var(--space-2);
+  }
+
+  .cta-header img {
+    border-radius: var(--radius-sm);
+  }
+
+  .cta-title {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .cta-description {
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+    margin: 0 0 var(--space-1);
+    line-height: 1.4;
+  }
+
+  .cta-link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--accent);
+  }
+
+  .docs-content {
+    flex: 1;
+    min-width: 0;
+    padding: var(--space-8) var(--space-10);
+  }
+
+  .docs-content-wrapper {
+    display: flex;
+    gap: var(--space-10);
+    max-width: calc(var(--content-max-width) + 240px);
+    margin: 0 auto;
+  }
+
+  .article {
+    flex: 1;
+    min-width: 0;
+    max-width: var(--content-max-width);
+  }
+
+  .toc-sidebar {
+    width: 200px;
+    flex-shrink: 0;
+  }
+
+  .article h1 {
+    font-size: 2rem;
+    margin-bottom: var(--space-6);
+    padding-bottom: var(--space-4);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .article :global(h2) {
+    margin-top: var(--space-10);
+    margin-bottom: var(--space-4);
+  }
+
+  .article :global(h3) {
+    margin-top: var(--space-8);
+    margin-bottom: var(--space-3);
+  }
+
+  .article :global(p) {
+    margin-bottom: var(--space-4);
+    line-height: 1.7;
+  }
+
+  .article :global(ul), .article :global(ol) {
+    margin-bottom: var(--space-4);
+    padding-left: var(--space-6);
+  }
+
+  .article :global(li) {
+    margin-bottom: var(--space-2);
+    line-height: 1.6;
+  }
+
+  .article :global(pre) {
+    margin-bottom: var(--space-6);
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 0;
+    overflow: hidden;
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    line-height: 1.6;
+  }
+
+  .article :global(pre code) {
+    display: block;
+    background: none;
+    border: none;
+    padding: var(--space-4);
+    font-size: inherit;
+    font-family: inherit;
+    overflow-x: auto;
+  }
+
+  .article :global(table) {
+    margin-bottom: var(--space-6);
+  }
+
+  @media (max-width: 1280px) {
+    .toc-sidebar {
+      display: none;
+    }
+
+    .docs-content-wrapper {
+      max-width: var(--content-max-width);
+    }
+  }
+
+  @media (max-width: 1024px) {
+    .sidebar {
+      display: none;
+    }
+
+    .docs-content {
+      padding: var(--space-6);
+    }
+  }
+
+  /* Scroll margin for anchor links */
+  .article :global(h2),
+  .article :global(h3) {
+    scroll-margin-top: calc(var(--header-height) + var(--space-6));
+    position: relative;
+  }
+
+  /* Anchor link on hover */
+  .article :global(h2)::before,
+  .article :global(h3)::before {
+    content: '#';
+    position: absolute;
+    left: -1em;
+    color: var(--text-muted);
+    font-weight: 400;
+    opacity: 0;
+    transition: opacity var(--transition-fast);
+  }
+
+  .article :global(h2:hover)::before,
+  .article :global(h3:hover)::before {
+    opacity: 1;
+    cursor: pointer;
+  }
+
+  .article :global(h2[id]),
+  .article :global(h3[id]) {
+    cursor: pointer;
+  }
+
+  /* Anchor link styling */
+  .article :global(h2:target),
+  .article :global(h3:target) {
+    animation: highlight 2s ease-out;
+  }
+
+  @keyframes highlight {
+    0% {
+      background-color: var(--accent-subtle);
+      margin-left: calc(-1 * var(--space-3));
+      padding-left: var(--space-3);
+      margin-right: calc(-1 * var(--space-3));
+      padding-right: var(--space-3);
+      border-radius: var(--radius-md);
+    }
+    100% {
+      background-color: transparent;
+    }
+  }
+</style>

@@ -1,0 +1,121 @@
+---
+import DocsLayout from '../../layouts/DocsLayout.astro';
+---
+
+<DocsLayout title="Caching">
+  <p>
+    The API uses aggressive caching to minimize upstream requests and provide fast responses.
+    Understanding how caching works helps you optimize your integration and interpret response headers.
+  </p>
+
+  <h2>Cache types</h2>
+
+  <h3>Positive cache</h3>
+  <p>
+    When lyrics are found, they are cached indefinitely until manually cleared.
+    Positive cache entries include the TTML data, track duration, and match score.
+  </p>
+
+  <h3>Negative cache</h3>
+  <p>
+    When lyrics are <em>not</em> found, this result is also cached to avoid repeated lookups.
+    Negative cache entries expire after 7 days by default.
+  </p>
+  <p>
+    If you receive a <code>NEGATIVE_HIT</code> response and believe lyrics should exist,
+    use the <code>/revalidate</code> endpoint (requires API key) to force a fresh lookup.
+  </p>
+
+  <h2>Cache key format</h2>
+  <p>Cache keys are normalized for consistent lookups:</p>
+  <pre><code class="language-bash">{`ttml_lyrics:{song} {artist} [{album}] [{duration}s]`}</code></pre>
+  <ul>
+    <li>All text is converted to lowercase</li>
+    <li>Leading/trailing whitespace is trimmed</li>
+    <li>Album and duration are optional but improve cache hit rates</li>
+  </ul>
+  <p>
+    For example, searching for "Shape of You" by "Ed Sheeran" and "shape of you" by "ed sheeran"
+    will hit the same cache entry.
+  </p>
+
+  <h2>Cache status header</h2>
+  <p>Every response includes an <code>X-Cache-Status</code> header:</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Value</th>
+        <th>Meaning</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>HIT</code></td>
+        <td>Lyrics served from cache</td>
+      </tr>
+      <tr>
+        <td><code>MISS</code></td>
+        <td>Lyrics fetched fresh and now cached</td>
+      </tr>
+      <tr>
+        <td><code>NEGATIVE_HIT</code></td>
+        <td>Previously searched, lyrics not found (cached negative result)</td>
+      </tr>
+      <tr>
+        <td><code>STALE</code></td>
+        <td>Backend failed, serving older cached version as fallback</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Duration parameter importance</h2>
+  <p>
+    The <code>duration</code> parameter significantly improves cache hit rates and match accuracy:
+  </p>
+  <ul>
+    <li>Helps distinguish between different versions of the same song (radio edit vs album version)</li>
+    <li>Improves matching when song/artist names have variations</li>
+    <li>Creates more specific cache keys, reducing false positives</li>
+  </ul>
+  <p>
+    If your application has access to track duration (e.g., from a music player),
+    always include it in your requests.
+  </p>
+
+  <h2>Cache fallback behavior</h2>
+  <p>
+    When the upstream provider fails, the API attempts to serve stale cached data:
+  </p>
+  <ol>
+    <li>Primary cache key lookup fails (fresh fetch attempted)</li>
+    <li>Upstream provider returns error</li>
+    <li>API checks for any cached version with similar parameters</li>
+    <li>If found, serves stale cache with <code>X-Cache-Status: STALE</code></li>
+    <li>If not found, returns the original error</li>
+  </ol>
+
+  <h2>Revalidation</h2>
+  <p>
+    To force a cache refresh, use the <code>/revalidate</code> endpoint (requires API key):
+  </p>
+  <pre><code class="language-bash">curl -H "X-API-Key: your-api-key" \
+  "https://lyrics-api.boidu.dev/revalidate?s=Song&a=Artist"</code></pre>
+  <p>
+    This is useful when:
+  </p>
+  <ul>
+    <li>You know lyrics have been corrected at the source</li>
+    <li>A negative cache entry should be re-checked</li>
+    <li>You want to verify the cache is up-to-date</li>
+  </ul>
+
+  <h2>Client-side caching</h2>
+  <p>
+    To reduce API calls, implement client-side caching:
+  </p>
+  <ul>
+    <li>Cache successful responses locally for the session or longer</li>
+    <li>Use the song+artist+duration as your local cache key</li>
+    <li>Respect <code>NEGATIVE_HIT</code> - don't retry immediately for songs without lyrics</li>
+  </ul>
+</DocsLayout>

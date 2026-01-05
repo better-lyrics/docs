@@ -1,0 +1,84 @@
+---
+import DocsLayout from '../../layouts/DocsLayout.astro';
+---
+
+<DocsLayout title="Introduction">
+  <p>
+    The Better Lyrics API provides syllable-synced lyrics for any song, completely free.
+    It powers the <a href="https://better-lyrics.boidu.dev" target="_blank" rel="noopener noreferrer">Better Lyrics</a> browser extension
+    and is available for developers to integrate into their own applications.
+  </p>
+
+  <h2>Base URL</h2>
+  <p>All API requests should be made to:</p>
+  <pre><code class="language-bash">https://lyrics-api.boidu.dev</code></pre>
+
+  <h2>Quick start</h2>
+  <p>Fetch lyrics for a song with a simple GET request:</p>
+  <pre><code class="language-bash">curl "https://lyrics-api.boidu.dev/getLyrics?s=Shape%20of%20You&a=Ed%20Sheeran"</code></pre>
+
+  <h3>Parameters</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Parameter</th>
+        <th>Required</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>s</code>, <code>song</code>, or <code>songName</code></td>
+        <td>Yes</td>
+        <td>The song title</td>
+      </tr>
+      <tr>
+        <td><code>a</code>, <code>artist</code>, or <code>artistName</code></td>
+        <td>Yes</td>
+        <td>The artist name</td>
+      </tr>
+      <tr>
+        <td><code>al</code>, <code>album</code>, or <code>albumName</code></td>
+        <td>No</td>
+        <td>Album name (improves matching accuracy)</td>
+      </tr>
+      <tr>
+        <td><code>d</code> or <code>duration</code></td>
+        <td>No</td>
+        <td>Track duration in seconds (improves matching accuracy)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Response</h3>
+  <p>A successful response returns TTML (Timed Text Markup Language) containing syllable-level timing data:</p>
+  <pre><code class="language-json">{`{
+  "ttml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\"?>..."
+}`}</code></pre>
+
+  <h2>Key features</h2>
+  <ul>
+    <li><strong>Free to use</strong> - No API key required for cached responses, no usage limits for most use cases</li>
+    <li><strong>Syllable-level sync</strong> - Each syllable has precise start and end timestamps for karaoke-style display</li>
+    <li><strong>Multiple providers</strong> - TTML (default), Kugou, and legacy options for different use cases</li>
+    <li><strong>Aggressive caching</strong> - Cache hits are free and require no API key</li>
+    <li><strong>Two-tier rate limiting</strong> - Graceful degradation under load with cached responses served even when rate limited</li>
+    <li><strong>Circuit breaker</strong> - Automatic protection against upstream failures</li>
+  </ul>
+
+  <h2>Next steps</h2>
+  <ul>
+    <li><a href="/docs/authentication">Authentication</a> - Learn about API keys and when you need them</li>
+    <li><a href="/docs/rate-limiting">Rate limiting</a> - Understand the two-tier rate limiting system</li>
+    <li><a href="/docs/response-format">Response format</a> - Parse and use the TTML response data</li>
+    <li><a href="/playground">Playground</a> - Try the API interactively</li>
+  </ul>
+</DocsLayout>
+
+<style>
+  .note {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    font-style: italic;
+  }
+</style>

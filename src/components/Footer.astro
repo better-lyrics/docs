@@ -1,0 +1,109 @@
+---
+
+---
+
+<footer class="footer">
+  <a
+    href="https://better-lyrics.boidu.dev"
+    target="_blank"
+    rel="noopener noreferrer"
+    class="ecosystem-badge"
+  >
+    <img src="/favicon.svg" alt="Better Lyrics" width="16" height="16" loading="lazy" />
+    <span>
+      Part of the <strong>Better Lyrics</strong> ecosystem
+    </span>
+  </a>
+
+  <div class="footer-links">
+    <a
+      href="https://github.com/better-lyrics/api"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="footer-link"
+    >
+      API Source
+    </a>
+    <span class="divider"></span>
+    <a
+      href="https://github.com/better-lyrics/docs"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="footer-link"
+    >
+      Docs Source
+    </a>
+  </div>
+</footer>
+
+<style>
+  .footer {
+    border-top: 1px solid var(--border);
+    padding: var(--space-4) var(--space-6);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .ecosystem-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-full);
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.75rem;
+    transition: all var(--transition-fast);
+  }
+
+  .ecosystem-badge:hover {
+    border-color: var(--border-hover);
+    color: var(--text-secondary);
+  }
+
+  .ecosystem-badge img {
+    border-radius: 2px;
+  }
+
+  .ecosystem-badge strong {
+    color: var(--text-secondary);
+    font-weight: 600;
+  }
+
+  .ecosystem-badge:hover strong {
+    color: var(--text-primary);
+  }
+
+  .footer-links {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  .footer-link {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: color var(--transition-fast);
+  }
+
+  .footer-link:hover {
+    color: var(--text-secondary);
+  }
+
+  .divider {
+    width: 1px;
+    height: 12px;
+    background-color: var(--border);
+  }
+
+  @media (max-width: 640px) {
+    .footer {
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+  }
+</style>

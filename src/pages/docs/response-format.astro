@@ -1,0 +1,215 @@
+---
+import DocsLayout from '../../layouts/DocsLayout.astro';
+---
+
+<DocsLayout title="Response format">
+  <p>
+    The default TTML provider returns lyrics in Timed Text Markup Language format,
+    providing syllable-level timing data for precise synchronization.
+  </p>
+
+  <h2>Response structure</h2>
+  <pre><code class="language-json">{`{
+  "ttml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\"?>...",
+  "score": 95
+}`}</code></pre>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Field</th>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>ttml</code></td>
+        <td>string</td>
+        <td>The full TTML XML document as a string</td>
+      </tr>
+      <tr>
+        <td><code>score</code></td>
+        <td>number</td>
+        <td>Match confidence score (0-100). Higher is better.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>TTML structure</h2>
+  <p>The TTML document contains timing information for each word:</p>
+  <p class="note">Note: The example below is formatted for readability. Actual responses are not formatted - see the whitespace warning above.</p>
+
+  <pre><code class="language-xml">{`<?xml version="1.0" encoding="UTF-8"?>
+<tt xmlns="http://www.w3.org/ns/ttml">
+  <body>
+    <div>
+      <p begin="00:00:18.234" end="00:00:21.891">
+        <span begin="00:00:18.234" end="00:00:18.567">The </span>
+        <span begin="00:00:18.567" end="00:00:18.901">club </span>
+        <span begin="00:00:18.901" end="00:00:19.234">isn't </span>
+        <span begin="00:00:19.234" end="00:00:19.568">the </span>
+        <span begin="00:00:19.568" end="00:00:19.901">best </span>
+        <span begin="00:00:19.901" end="00:00:20.234">place </span>
+        <span begin="00:00:20.234" end="00:00:20.568">to </span>
+        <span begin="00:00:20.568" end="00:00:20.901">find </span>
+        <span begin="00:00:20.901" end="00:00:21.234">a </span>
+        <span begin="00:00:21.234" end="00:00:21.891">lover</span>
+      </p>
+    </div>
+  </body>
+</tt>`}</code></pre>
+
+  <h2>Key elements</h2>
+
+  <h3><code>&lt;p&gt;</code> - Line element</h3>
+  <p>Each <code>&lt;p&gt;</code> represents a line of lyrics:</p>
+  <ul>
+    <li><code>begin</code> - Start time of the line</li>
+    <li><code>end</code> - End time of the line</li>
+  </ul>
+
+  <h3><code>&lt;span&gt;</code> - Word element</h3>
+  <p>Each <code>&lt;span&gt;</code> within a line represents a word:</p>
+  <ul>
+    <li><code>begin</code> - Start time of the word</li>
+    <li><code>end</code> - End time of the word</li>
+    <li>Text content is the word itself (including trailing spaces)</li>
+  </ul>
+
+  <h2>Important: whitespace handling</h2>
+  <div class="warning-box">
+    <p>
+      <strong>Do not format or pretty-print the TTML response.</strong>
+    </p>
+    <p>
+      The response uses whitespace between <code>&lt;span&gt;</code> elements to represent spaces
+      between syllables/words. This whitespace is not enclosed in tags. If you format the XML
+      (e.g., with a pretty-printer), these critical whitespaces will be lost, breaking the
+      syllable synchronization.
+    </p>
+    <p>
+      Always preserve the original string exactly as received. When parsing, use the raw
+      <code>textContent</code> of each span, which includes the intended whitespace.
+    </p>
+  </div>
+
+  <h2>Time format</h2>
+  <p>Times are in <code>HH:MM:SS.mmm</code> format:</p>
+  <ul>
+    <li><code>00:00:18.234</code> = 18.234 seconds</li>
+    <li><code>00:01:30.500</code> = 90.5 seconds</li>
+  </ul>
+  <p>To convert to milliseconds: parse the time string and multiply appropriately.</p>
+
+  <h2>Parsing example (JavaScript)</h2>
+  <pre><code class="language-javascript">{`function parseTTML(ttmlString) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(ttmlString, 'text/xml');
+  const lines = [];
+
+  doc.querySelectorAll('p').forEach(p => {
+    const words = [];
+    p.querySelectorAll('span').forEach(span => {
+      words.push({
+        text: span.textContent,
+        begin: parseTime(span.getAttribute('begin')),
+        end: parseTime(span.getAttribute('end'))
+      });
+    });
+    lines.push({
+      begin: parseTime(p.getAttribute('begin')),
+      end: parseTime(p.getAttribute('end')),
+      words
+    });
+  });
+
+  return lines;
+}
+
+function parseTime(timeStr) {
+  // Handles "HH:MM:SS.mmm", "MM:SS.mmm", "SS.mmm"
+  const parts = timeStr.split(':');
+  let seconds = 0;
+
+  if (parts.length === 3) {
+    seconds = parseInt(parts[0]) * 3600 +
+              parseInt(parts[1]) * 60 +
+              parseFloat(parts[2]);
+  } else if (parts.length === 2) {
+    seconds = parseInt(parts[0]) * 60 +
+              parseFloat(parts[1]);
+  } else {
+    seconds = parseFloat(parts[0]);
+  }
+
+  return Math.round(seconds * 1000); // Return milliseconds
+}`}</code></pre>
+
+  <h2>RTL language support</h2>
+  <p>
+    For right-to-left languages (Arabic, Hebrew, Persian, etc.), the TTML document
+    includes language attributes:
+  </p>
+  <pre><code class="language-xml">{`<tt xml:lang="ar" xmlns="http://www.w3.org/ns/ttml">
+  ...
+</tt>`}</code></pre>
+  <p>
+    Check the <code>xml:lang</code> attribute to determine text direction.
+    Common RTL language codes: <code>ar</code>, <code>he</code>, <code>fa</code>, <code>ur</code>.
+  </p>
+
+  <h2>Response headers</h2>
+  <p>Additional context is provided via response headers:</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Header</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>X-Cache-Status</code></td>
+        <td>Whether response came from cache (HIT, MISS, etc.)</td>
+      </tr>
+      <tr>
+        <td><code>X-Provider</code></td>
+        <td>Which provider served the response</td>
+      </tr>
+      <tr>
+        <td><code>X-RateLimit-Type</code></td>
+        <td>Current rate limit tier</td>
+      </tr>
+    </tbody>
+  </table>
+</DocsLayout>
+
+<style>
+  .note {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    font-style: italic;
+  }
+
+  .warning-box {
+    background-color: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+    margin: var(--space-4) 0;
+  }
+
+  .warning-box p {
+    margin: 0;
+    font-size: 0.9375rem;
+  }
+
+  .warning-box p + p {
+    margin-top: var(--space-3);
+  }
+
+  .warning-box strong {
+    color: var(--warning);
+  }
+</style>

@@ -1,0 +1,191 @@
+---
+import DocsLayout from '../../layouts/DocsLayout.astro';
+---
+
+<DocsLayout title="Error handling">
+  <p>
+    The API uses standard HTTP status codes and returns JSON error responses.
+    Understanding error types helps you handle failures gracefully.
+  </p>
+
+  <h2>Status codes</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Code</th>
+        <th>Meaning</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>200</code></td>
+        <td>Success</td>
+        <td>Parse the response body</td>
+      </tr>
+      <tr>
+        <td><code>401</code></td>
+        <td>Unauthorized</td>
+        <td>Check API key or request is a cache miss</td>
+      </tr>
+      <tr>
+        <td><code>404</code></td>
+        <td>Not found</td>
+        <td>Lyrics not available for this track</td>
+      </tr>
+      <tr>
+        <td><code>422</code></td>
+        <td>Unprocessable</td>
+        <td>Missing required parameters</td>
+      </tr>
+      <tr>
+        <td><code>429</code></td>
+        <td>Too many requests</td>
+        <td>Rate limited - check Retry-After header</td>
+      </tr>
+      <tr>
+        <td><code>500</code></td>
+        <td>Server error</td>
+        <td>Upstream failure - retry with backoff</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Error response format</h2>
+  <p>All error responses follow this structure:</p>
+  <pre><code class="language-json">{`{
+  "error": "Short error description",
+  "message": "Longer explanation with suggested action"
+}`}</code></pre>
+
+  <h2>Common errors</h2>
+
+  <h3>Missing parameters (422)</h3>
+  <pre><code class="language-json">{`{
+  "error": "Song name and artist name are required"
+}`}</code></pre>
+  <p>Both <code>s</code> (song) and <code>a</code> (artist) parameters are required.</p>
+
+  <h3>Lyrics not found (404)</h3>
+  <pre><code class="language-json">{`{
+  "error": "Lyrics not available for this track"
+}`}</code></pre>
+  <p>
+    No lyrics exist for this song. The result is cached for 7 days (negative cache).
+    Check <code>X-Cache-Status: NEGATIVE_HIT</code> to know if this is a cached result.
+  </p>
+
+  <h3>API key required (401)</h3>
+  <pre><code class="language-json">{`{
+  "error": "API key required",
+  "message": "Uncached queries require a valid API key via X-API-Key header"
+}`}</code></pre>
+  <p>
+    The requested lyrics are not cached and the server requires an API key for fresh fetches.
+    Either provide an API key or try a more popular song that may be cached.
+  </p>
+
+  <h3>Rate limited (429)</h3>
+  <pre><code class="language-json">{`{
+  "error": "Rate limit exceeded. This request requires cached data, but no cache is available for this query.",
+  "message": "Please try again later or reduce your request rate."
+}`}</code></pre>
+  <p>
+    You've exceeded the rate limit. Check the <code>Retry-After</code> header and
+    <code>X-RateLimit-Type</code> to understand the situation.
+  </p>
+
+  <h2>Circuit breaker</h2>
+  <p>
+    The API implements a circuit breaker pattern to handle upstream failures gracefully.
+    When the upstream provider experiences repeated failures, the circuit breaker "opens"
+    to prevent cascading failures.
+  </p>
+
+  <h3>Circuit breaker states</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>State</th>
+        <th>Behavior</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>CLOSED</code></td>
+        <td>Normal operation - requests flow through</td>
+      </tr>
+      <tr>
+        <td><code>OPEN</code></td>
+        <td>Circuit tripped - requests fail fast, stale cache served if available</td>
+      </tr>
+      <tr>
+        <td><code>HALF_OPEN</code></td>
+        <td>Testing recovery - limited requests allowed through</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>During circuit breaker open</h3>
+  <ul>
+    <li>Cached responses are still served (both positive and stale cache)</li>
+    <li>Fresh fetch requests fail fast instead of timing out</li>
+    <li>The circuit periodically allows test requests to check if upstream has recovered</li>
+  </ul>
+
+  <h2>Retry strategies</h2>
+
+  <h3>For 429 (rate limited)</h3>
+  <ol>
+    <li>Read the <code>Retry-After</code> header</li>
+    <li>Wait the specified number of seconds</li>
+    <li>Retry the request</li>
+  </ol>
+
+  <h3>For 500 (server error)</h3>
+  <ol>
+    <li>Implement exponential backoff</li>
+    <li>Start with 1 second delay</li>
+    <li>Double the delay on each retry (1s, 2s, 4s, 8s...)</li>
+    <li>Cap at a maximum delay (e.g., 60 seconds)</li>
+    <li>Give up after a maximum number of retries (e.g., 5)</li>
+  </ol>
+
+  <h3>For 404 (not found)</h3>
+  <p>
+    Do not retry immediately. The negative result is cached for 7 days.
+    If you believe lyrics should exist, use the <code>/revalidate</code> endpoint
+    with an API key to force a fresh lookup.
+  </p>
+
+  <h2>Example error handling (JavaScript)</h2>
+  <pre><code class="language-javascript">{`async function fetchLyrics(song, artist) {
+  const url = \`https://lyrics-api.boidu.dev/getLyrics?s=\${encodeURIComponent(song)}&a=\${encodeURIComponent(artist)}\`;
+
+  const response = await fetch(url);
+
+  if (response.ok) {
+    return await response.json();
+  }
+
+  const error = await response.json();
+
+  switch (response.status) {
+    case 404:
+      // Lyrics not available - cache this locally
+      return { notFound: true, cached: response.headers.get('X-Cache-Status') === 'NEGATIVE_HIT' };
+
+    case 429:
+      // Rate limited - get retry time
+      const retryAfter = parseInt(response.headers.get('Retry-After') || '60');
+      throw new Error(\`Rate limited. Retry after \${retryAfter} seconds.\`);
+
+    case 401:
+      // Auth required for cache miss
+      throw new Error('API key required for uncached queries');
+
+    default:
+      throw new Error(error.message || 'Unknown error');
+  }
+}`}</code></pre>
+</DocsLayout>

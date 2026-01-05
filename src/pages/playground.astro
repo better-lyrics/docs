@@ -1,0 +1,50 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import Playground from '../components/Playground';
+---
+
+<BaseLayout title="Playground" description="Try the Better Lyrics API interactively">
+  <Header />
+
+  <main class="main">
+    <div class="container">
+      <div class="page-header">
+        <h1>Playground</h1>
+        <p>Test the API interactively. Enter a song and artist to fetch synchronized lyrics.</p>
+      </div>
+
+      <Playground client:load />
+    </div>
+  </main>
+
+  <Footer />
+</BaseLayout>
+
+<style>
+  .main {
+    min-height: calc(100vh - var(--header-height));
+    padding: var(--space-8) var(--space-6);
+  }
+
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .page-header {
+    margin-bottom: var(--space-8);
+  }
+
+  .page-header h1 {
+    font-size: 2rem;
+    margin-bottom: var(--space-2);
+  }
+
+  .page-header p {
+    color: var(--text-secondary);
+    font-size: 1.0625rem;
+    margin: 0;
+  }
+</style>

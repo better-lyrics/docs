@@ -1,0 +1,284 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+---
+
+<BaseLayout title="Home">
+  <Header />
+
+  <main class="main">
+    <section class="hero">
+			<span class="hero-badge">
+				Free • Unlimited cached requests • Open source
+			</span>
+      <h1 class="hero-title">The API powering Better Lyrics</h1>
+      <p class="hero-description">
+        Fetch syllable-synced lyrics for any song, completely free.
+        Precise timing data, aggressive caching, and multiple provider support.
+      </p>
+      <div class="hero-actions">
+        <a href="/docs/introduction" class="btn btn-primary">Get started</a>
+        <a href="/playground" class="btn btn-secondary">Try the playground</a>
+      </div>
+    </section>
+
+    <section class="example">
+      <h2 class="example-title">Quick example</h2>
+      <div class="code-block">
+        <div class="code-header">
+          <span class="code-lang">bash</span>
+          <button class="copy-btn" data-code="curl &quot;https://lyrics-api.boidu.dev/getLyrics?s=Shape%20of%20You&a=Ed%20Sheeran&quot;">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="5" y="5" width="9" height="9" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M11 5V3.5C11 2.67157 10.3284 2 9.5 2H3.5C2.67157 2 2 2.67157 2 3.5V9.5C2 10.3284 2.67157 11 3.5 11H5" stroke="currentColor" stroke-width="1.5"/>
+            </svg>
+            Copy
+          </button>
+        </div>
+        <pre><code class="language-bash">curl "https://lyrics-api.boidu.dev/getLyrics?\
+  s=Shape%20of%20You&a=Ed%20Sheeran"</code></pre>
+      </div>
+    </section>
+
+    <section class="docs-highlights">
+      <h2 class="section-title">Learn the API</h2>
+      <div class="docs-grid">
+        <a href="/docs/introduction" class="doc-card">
+          <span class="doc-label">Start here</span>
+          <h3>Getting started</h3>
+          <p>Quick introduction to the API, base URL, and your first request.</p>
+        </a>
+        <a href="/reference/get-lyrics" class="doc-card">
+          <span class="doc-label">Reference</span>
+          <h3>GET /getLyrics</h3>
+          <p>Main endpoint for fetching lyrics. Parameters, headers, and response format.</p>
+        </a>
+        <a href="/docs/response-format" class="doc-card">
+          <span class="doc-label">Concept</span>
+          <h3>Response format</h3>
+          <p>TTML format with syllable-level timing. Parse and display synchronized lyrics.</p>
+        </a>
+        <a href="/docs/rate-limiting" class="doc-card">
+          <span class="doc-label">Concept</span>
+          <h3>Rate limiting</h3>
+          <p>Two-tier system with graceful degradation. Cached responses served even when rate limited.</p>
+        </a>
+      </div>
+    </section>
+  </main>
+
+  <Footer />
+</BaseLayout>
+
+<style>
+  .main {
+    min-height: calc(100vh - var(--header-height));
+    display: flex;
+    flex-direction: column;
+  }
+
+  .hero {
+    text-align: center;
+    padding: var(--space-16) var(--space-6);
+    max-width: 720px;
+    margin: 0 auto;
+  }
+
+  .hero-badge {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    color: var(--success);
+    background-color: rgba(34, 197, 94, 0.1);
+    border: 1px solid rgba(34, 197, 94, 0.2);
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius-full);
+    margin-bottom: var(--space-4);
+  }
+
+  .hero-title {
+    font-size: 3rem;
+    font-weight: 700;
+    margin-bottom: var(--space-4);
+    background: linear-gradient(to bottom, var(--text-primary), var(--text-secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero-description {
+    font-size: 1.25rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin-bottom: var(--space-8);
+  }
+
+  .hero-actions {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+  }
+
+  .example {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 0 var(--space-6) var(--space-12);
+    width: 100%;
+  }
+
+  .example-title {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    margin-bottom: var(--space-4);
+  }
+
+  .code-block {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+
+  .code-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--border);
+    background-color: var(--bg-tertiary);
+  }
+
+  .code-lang {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .copy-btn {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+
+  .copy-btn:hover {
+    color: var(--text-primary);
+    background-color: var(--bg-secondary);
+  }
+
+  .code-block pre {
+    margin: 0;
+    padding: var(--space-4);
+    background: transparent;
+    border: none;
+    border-radius: 0;
+  }
+
+  .code-block code {
+    color: var(--text-secondary);
+  }
+
+  .docs-highlights {
+    background-color: var(--bg-secondary);
+    border-top: 1px solid var(--border);
+    padding: var(--space-16) var(--space-6);
+  }
+
+  .section-title {
+    text-align: center;
+    font-size: 1.75rem;
+    margin-bottom: var(--space-10);
+  }
+
+  .docs-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: var(--space-6);
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+
+  .doc-card {
+    display: block;
+    padding: var(--space-6);
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    text-decoration: none;
+    transition: all var(--transition-fast);
+  }
+
+  .doc-card:hover {
+    border-color: var(--border-hover);
+    transform: translateY(-2px);
+  }
+
+  .doc-label {
+    display: inline-block;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin-bottom: var(--space-2);
+  }
+
+  .doc-card h3 {
+    font-size: 1.0625rem;
+    font-weight: 600;
+    margin-bottom: var(--space-2);
+    color: var(--text-primary);
+  }
+
+  .doc-card p {
+    font-size: 0.9375rem;
+    color: var(--text-secondary);
+    margin: 0;
+    line-height: 1.5;
+  }
+
+  @media (max-width: 640px) {
+    .hero-title {
+      font-size: 2rem;
+    }
+
+    .hero-description {
+      font-size: 1.0625rem;
+    }
+
+    .hero-actions {
+      flex-direction: column;
+      align-items: stretch;
+    }
+  }
+</style>
+
+<script>
+  document.querySelectorAll('.copy-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const code = btn.getAttribute('data-code');
+      if (code) {
+        await navigator.clipboard.writeText(code);
+        const originalText = btn.innerHTML;
+        btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 8L6.5 11.5L13 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Copied`;
+        setTimeout(() => {
+          btn.innerHTML = originalText;
+        }, 2000);
+      }
+    });
+  });
+</script>

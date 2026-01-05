@@ -1,0 +1,235 @@
+---
+import DocsLayout from '../../layouts/DocsLayout.astro';
+---
+
+<DocsLayout title="Cache endpoints">
+  <p>
+    Administrative endpoints for cache inspection and management.
+    All endpoints (except <code>/cache/help</code>) require the <code>Authorization</code> header
+    with a valid cache access token.
+  </p>
+
+  <h2>Authentication</h2>
+  <pre><code class="language-bash">curl -H "Authorization: your-cache-token" \
+  "https://lyrics-api.boidu.dev/cache"</code></pre>
+
+  <h2>Endpoints overview</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Endpoint</th>
+        <th>Description</th>
+        <th>Auth required</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>GET /cache/help</code></td>
+        <td>Documentation for cache endpoints</td>
+        <td>No</td>
+      </tr>
+      <tr>
+        <td><code>GET /cache</code></td>
+        <td>Cache statistics and full dump</td>
+        <td>Yes</td>
+      </tr>
+      <tr>
+        <td><code>GET /cache/lookup</code></td>
+        <td>Check if a song is cached</td>
+        <td>Yes</td>
+      </tr>
+      <tr>
+        <td><code>GET /cache/keys</code></td>
+        <td>List and search cache keys</td>
+        <td>Yes</td>
+      </tr>
+      <tr>
+        <td><code>GET /cache/debug</code></td>
+        <td>Inspect a specific cache entry</td>
+        <td>Yes</td>
+      </tr>
+      <tr>
+        <td><code>GET /cache/backup</code></td>
+        <td>Create a cache backup</td>
+        <td>Yes</td>
+      </tr>
+      <tr>
+        <td><code>GET /cache/backups</code></td>
+        <td>List available backups</td>
+        <td>Yes</td>
+      </tr>
+      <tr>
+        <td><code>GET /cache/restore</code></td>
+        <td>Restore from a backup</td>
+        <td>Yes</td>
+      </tr>
+      <tr>
+        <td><code>GET /cache/clear</code></td>
+        <td>Clear the cache (creates backup first)</td>
+        <td>Yes</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>GET /cache/lookup</h2>
+  <p>Check if lyrics are cached for a specific song.</p>
+
+  <h3>Parameters</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>s</code></td>
+        <td>Song name</td>
+      </tr>
+      <tr>
+        <td><code>a</code></td>
+        <td>Artist name</td>
+      </tr>
+      <tr>
+        <td><code>al</code></td>
+        <td>Album name (optional)</td>
+      </tr>
+      <tr>
+        <td><code>d</code></td>
+        <td>Duration in seconds (optional)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Example</h3>
+  <pre><code class="language-bash">curl -H "Authorization: token" \
+  "https://lyrics-api.boidu.dev/cache/lookup?s=Shape%20of%20You&a=Ed%20Sheeran"</code></pre>
+
+  <pre><code class="language-json">{`{
+  "normalized_key": "ttml_lyrics:shape of you ed sheeran",
+  "legacy_key": "ttml_lyrics:Shape of You Ed Sheeran",
+  "found": true,
+  "found_in": "normalized"
+}`}</code></pre>
+
+  <h2>GET /cache/keys</h2>
+  <p>List and search cache keys.</p>
+
+  <h3>Parameters</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>prefix</code></td>
+        <td>Filter keys by prefix</td>
+      </tr>
+      <tr>
+        <td><code>contains</code></td>
+        <td>Filter keys containing substring</td>
+      </tr>
+      <tr>
+        <td><code>limit</code></td>
+        <td>Maximum results (default 100, max 1000)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Example</h3>
+  <pre><code class="language-bash">curl -H "Authorization: token" \
+  "https://lyrics-api.boidu.dev/cache/keys?contains=taylor&limit=10"</code></pre>
+
+  <h2>GET /cache/debug</h2>
+  <p>Inspect a specific cache entry.</p>
+
+  <h3>Parameters</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>key</code></td>
+        <td>The full cache key to inspect</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Example</h3>
+  <pre><code class="language-bash">curl -H "Authorization: token" \
+  "https://lyrics-api.boidu.dev/cache/debug?key=ttml_lyrics:shape%20of%20you%20ed%20sheeran"</code></pre>
+
+  <pre><code class="language-json">{`{
+  "key": "ttml_lyrics:shape of you ed sheeran",
+  "exists": true,
+  "compressed": true,
+  "compression_ratio": 0.34,
+  "original_size_bytes": 45678,
+  "stored_size_bytes": 15530,
+  "entry_type": "lyrics",
+  "preview": "<?xml version=\\"1.0\\"?>..."
+}`}</code></pre>
+
+  <h2>GET /cache/backup</h2>
+  <p>Create a timestamped backup of the cache database.</p>
+
+  <h3>Example</h3>
+  <pre><code class="language-bash">curl -H "Authorization: token" \
+  "https://lyrics-api.boidu.dev/cache/backup"</code></pre>
+
+  <pre><code class="language-json">{`{
+  "message": "Backup created successfully",
+  "backup_path": "/data/backups/cache_backup_2025-01-06_12-30-45.db"
+}`}</code></pre>
+
+  <h2>GET /cache/restore</h2>
+  <p>Restore the cache from a backup file.</p>
+
+  <h3>Parameters</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>backup</code></td>
+        <td>Backup filename (from <code>/cache/backups</code>)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Example</h3>
+  <pre><code class="language-bash">curl -H "Authorization: token" \
+  "https://lyrics-api.boidu.dev/cache/restore?backup=cache_backup_2025-01-06_12-30-45.db"</code></pre>
+
+  <h2>GET /cache/clear</h2>
+  <p>Clear all cache entries. Automatically creates a backup first.</p>
+
+  <h3>Example</h3>
+  <pre><code class="language-bash">curl -H "Authorization: token" \
+  "https://lyrics-api.boidu.dev/cache/clear"</code></pre>
+
+  <pre><code class="language-json">{`{
+  "message": "Cache cleared successfully",
+  "backup_path": "/data/backups/cache_backup_2025-01-06_12-35-00.db"
+}`}</code></pre>
+
+  <h2>Notes</h2>
+  <ul>
+    <li>These endpoints are for administrative use only</li>
+    <li>Cache operations may be slow for large caches</li>
+    <li>Backup/restore operations affect all cached data</li>
+    <li>The cache access token is different from the API key</li>
+  </ul>
+</DocsLayout>
