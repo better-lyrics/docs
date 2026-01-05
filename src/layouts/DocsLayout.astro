@@ -4,6 +4,7 @@ import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import TableOfContents from '../components/TableOfContents.tsx';
 import Search from '../components/Search.tsx';
+import MobileNav from '../components/MobileNav.tsx';
 
 interface Props {
   title: string;
@@ -34,6 +35,12 @@ const referenceLinks = [
 
 <BaseLayout title={title} description={description}>
   <Header />
+  <MobileNav
+    client:load
+    currentPath={currentPath}
+    conceptsLinks={conceptsLinks}
+    referenceLinks={referenceLinks}
+  />
 
   <div class="docs-layout">
     <aside class="sidebar">

@@ -3,10 +3,14 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import Playground from '../components/Playground';
+import HeaderMobileNav from '../components/HeaderMobileNav';
+
+const currentPath = Astro.url.pathname;
 ---
 
 <BaseLayout title="Playground" description="Try the Better Lyrics API interactively">
   <Header />
+  <HeaderMobileNav client:load currentPath={currentPath} />
 
   <main class="main">
     <div class="container">

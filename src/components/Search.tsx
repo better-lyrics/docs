@@ -307,6 +307,14 @@ export default function Search() {
           color: var(--text-muted);
         }
 
+        @media (max-width: 768px) {
+          .search-trigger kbd,
+          .search-input-wrapper kbd,
+          .search-hints {
+            display: none;
+          }
+        }
+
         .search-modal-backdrop {
           position: fixed;
           inset: 0;
@@ -325,8 +333,9 @@ export default function Search() {
         }
 
         .search-modal {
-          width: 100%;
+          width: calc(100% - var(--space-8));
           max-width: 560px;
+          margin: 0 var(--space-4);
           background-color: var(--bg-secondary);
           border: 1px solid var(--border);
           border-radius: var(--radius-lg);

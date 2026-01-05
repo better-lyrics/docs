@@ -2,10 +2,14 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
+import HeaderMobileNav from '../components/HeaderMobileNav';
+
+const currentPath = Astro.url.pathname;
 ---
 
 <BaseLayout title="Home">
   <Header />
+  <HeaderMobileNav client:load currentPath={currentPath} />
 
   <main class="main">
     <section class="hero">
