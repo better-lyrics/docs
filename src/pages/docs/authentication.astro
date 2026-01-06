@@ -62,7 +62,7 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
     <tbody>
       <tr>
         <td><code>X-Auth-Mode</code></td>
-        <td>Current auth mode: <code>public</code> (API key not required) or <code>cache-first</code> (API key required for cache misses)</td>
+        <td>Current auth mode: <code>authenticated</code> (valid API key), <code>invalid</code> (invalid API key provided), or <code>cache</code> (API key required for fresh requests)</td>
       </tr>
       <tr>
         <td><code>X-RateLimit-Bypass</code></td>
