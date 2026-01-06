@@ -2,7 +2,7 @@
 
 Documentation for the Better Lyrics API - free syllable-synced lyrics for any song.
 
-<https://docs.better-lyrics.boidu.dev>
+<https://lyrics-api-docs.boidu.dev>
 
 ## Development
 
