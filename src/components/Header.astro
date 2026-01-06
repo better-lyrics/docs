@@ -1,5 +1,5 @@
 ---
-const currentPath = Astro.url.pathname;
+const currentPath = Astro.url.pathname.replace(/\/$/, '') || '/';
 
 const navLinks = [
   { href: '/docs/introduction', label: 'Docs' },

@@ -12,7 +12,7 @@ interface Props {
 }
 
 const { title, description } = Astro.props;
-const currentPath = Astro.url.pathname;
+const currentPath = Astro.url.pathname.replace(/\/$/, '') || '/';
 
 const conceptsLinks = [
   { href: '/docs/introduction', label: 'Introduction' },
