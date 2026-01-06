@@ -28,23 +28,35 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
     always include it.
   </p>
 
-  <h2>Normalize input before sending</h2>
+  <h2>Include album name when available</h2>
   <p>
-    While the API normalizes input server-side, you can improve cache hit rates
-    by sending consistent input:
+    Including the album name helps the API find the correct version of a song,
+    especially when:
   </p>
   <ul>
-    <li>Trim leading/trailing whitespace</li>
-    <li>Remove "(Official Video)" or similar suffixes from song names</li>
-    <li>Use the primary artist name, not "feat." artists</li>
+    <li>The song appears on multiple albums</li>
+    <li>There are remastered or deluxe editions</li>
+    <li>The artist has re-recorded songs</li>
   </ul>
-  <pre><code class="language-javascript">{`// Before
-song = "  Shape of You (Official Video)  "
-artist = "Ed Sheeran feat. Someone"
+  <pre><code class="language-bash">{`# Recommended - includes album
+/getLyrics?s=Yesterday&a=The%20Beatles&album=Help!&d=125
 
-// After normalization
-song = "Shape of You"
-artist = "Ed Sheeran"`}</code></pre>
+# Less specific - may return wrong version
+/getLyrics?s=Yesterday&a=The%20Beatles`}</code></pre>
+  <p>
+    While album is optional, including it improves match accuracy.
+  </p>
+
+  <h2>Trim whitespace from input</h2>
+  <p>
+    While the API normalizes input server-side, you can improve cache hit rates
+    by trimming leading and trailing whitespace before sending:
+  </p>
+  <pre><code class="language-javascript">{`// Before
+song = "  Shape of You  "
+
+// After
+song = song.trim() // "Shape of You"`}</code></pre>
 
   <h2>Implement client-side caching</h2>
   <p>
