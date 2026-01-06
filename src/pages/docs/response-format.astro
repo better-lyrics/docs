@@ -95,12 +95,12 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
   </div>
 
   <h2>Time format</h2>
-  <p>Times are in <code>HH:MM:SS.mmm</code> format:</p>
+  <p>Times can appear in two formats:</p>
   <ul>
-    <li><code>00:00:18.234</code> = 18.234 seconds</li>
-    <li><code>00:01:30.500</code> = 90.5 seconds</li>
+    <li><code>HH:MM:SS.mmm</code> - e.g., <code>00:01:30.500</code> = 90.5 seconds</li>
+    <li><code>M:SS.mmm</code> - e.g., <code>1:16.656</code> = 76.656 seconds</li>
   </ul>
-  <p>To convert to milliseconds: parse the time string and multiply appropriately.</p>
+  <p>Your parser should handle both formats. The JavaScript example below demonstrates this.</p>
 
   <h2>Parsing example (JavaScript)</h2>
   <pre><code class="language-javascript">{`function parseTTML(ttmlString) {
@@ -109,17 +109,38 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
   const lines = [];
 
   doc.querySelectorAll('p').forEach(p => {
+    const agent = p.getAttribute('ttm:agent'); // v1, v2, v1000, etc.
     const words = [];
-    p.querySelectorAll('span').forEach(span => {
-      words.push({
-        text: span.textContent,
-        begin: parseTime(span.getAttribute('begin')),
-        end: parseTime(span.getAttribute('end'))
+
+    // Recursively collect spans, tracking background vocal context
+    function collectSpans(element, isBackground = false) {
+      element.childNodes.forEach(node => {
+        if (node.nodeType === Node.ELEMENT_NODE && node.tagName === 'span') {
+          const isBg = isBackground || node.getAttribute('ttm:role') === 'x-bg';
+          const begin = node.getAttribute('begin');
+
+          if (begin) {
+            // This is a timed span (word)
+            words.push({
+              text: node.textContent,
+              begin: parseTime(begin),
+              end: parseTime(node.getAttribute('end')),
+              isBackground: isBg
+            });
+          } else {
+            // This is a wrapper span, recurse into it
+            collectSpans(node, isBg);
+          }
+        }
       });
-    });
+    }
+
+    collectSpans(p);
+
     lines.push({
       begin: parseTime(p.getAttribute('begin')),
       end: parseTime(p.getAttribute('end')),
+      agent,
       words
     });
   });
@@ -128,7 +149,7 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
 }
 
 function parseTime(timeStr) {
-  // Handles "HH:MM:SS.mmm", "MM:SS.mmm", "SS.mmm"
+  // Handles "HH:MM:SS.mmm", "M:SS.mmm", "SS.mmm"
   const parts = timeStr.split(':');
   let seconds = 0;
 
@@ -158,6 +179,36 @@ function parseTime(timeStr) {
     Check the <code>xml:lang</code> attribute to determine text direction.
     Common RTL language codes: <code>ar</code>, <code>he</code>, <code>fa</code>, <code>ur</code>.
   </p>
+
+  <h2>Multiple speakers</h2>
+  <p>
+    Songs with multiple vocalists use the <code>ttm:agent</code> attribute on <code>&lt;p&gt;</code>
+    elements to identify which speaker is singing each line:
+  </p>
+  <pre><code class="language-xml">{`<p ttm:agent="v1" begin="0:05.123" end="0:08.456">
+  <span begin="0:05.123" end="0:06.789">First </span>
+  <span begin="0:06.789" end="0:08.456">vocalist</span>
+</p>
+<p ttm:agent="v2" begin="0:08.456" end="0:11.789">
+  <span begin="0:08.456" end="0:10.123">Second </span>
+  <span begin="0:10.123" end="0:11.789">vocalist</span>
+</p>`}</code></pre>
+  <ul>
+    <li><code>v1</code>, <code>v2</code>, etc. identify different vocalists</li>
+    <li><code>v1000</code> indicates multiple speakers singing together</li>
+  </ul>
+
+  <h2>Background vocals</h2>
+  <p>
+    Background vocals within a line are wrapped in a <code>&lt;span&gt;</code> with
+    <code>ttm:role="x-bg"</code>:
+  </p>
+  <pre><code class="language-xml">{`<p ttm:agent="v1" begin="0:15.000" end="0:20.000">
+  <span begin="0:15.000" end="0:17.500">Lead lyrics </span>
+  <span ttm:role="x-bg">
+    <span begin="0:17.500" end="0:20.000">background vocals</span>
+  </span>
+</p>`}</code></pre>
 
   <h2>Response headers</h2>
   <p>Additional context is provided via response headers:</p>

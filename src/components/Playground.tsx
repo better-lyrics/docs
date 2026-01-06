@@ -149,24 +149,47 @@ export default function Playground() {
 
     try {
       if (body.ttml) {
-        // Parse TTML - extract lines and words
+        // Parse TTML - extract lines and words with agent and background info
         const parser = new DOMParser();
         const doc = parser.parseFromString(body.ttml, 'text/xml');
-        const lines: Array<{ begin: string; end: string; text: string; words: Array<{ begin: string; end: string; text: string }> }> = [];
+        const lines: Array<{
+          begin: string;
+          end: string;
+          text: string;
+          agent?: string;
+          words: Array<{ begin: string; end: string; text: string; isBackground?: boolean }>;
+        }> = [];
 
         doc.querySelectorAll('p').forEach((p) => {
-          const words: Array<{ begin: string; end: string; text: string }> = [];
-          p.querySelectorAll('span').forEach((span) => {
+          const agent = p.getAttribute('ttm:agent') || undefined;
+          const words: Array<{ begin: string; end: string; text: string; isBackground?: boolean }> = [];
+
+          // Get all timed spans
+          p.querySelectorAll('span[begin]').forEach((span) => {
+            // Check if inside a background vocal span
+            let isBackground = false;
+            let parent = span.parentElement;
+            while (parent && parent !== p) {
+              if (parent.getAttribute('ttm:role') === 'x-bg') {
+                isBackground = true;
+                break;
+              }
+              parent = parent.parentElement;
+            }
+
             words.push({
               begin: span.getAttribute('begin') || '',
               end: span.getAttribute('end') || '',
               text: span.textContent || '',
+              ...(isBackground ? { isBackground: true } : {}),
             });
           });
+
           lines.push({
             begin: p.getAttribute('begin') || '',
             end: p.getAttribute('end') || '',
             text: p.textContent || '',
+            ...(agent ? { agent } : {}),
             words,
           });
         });

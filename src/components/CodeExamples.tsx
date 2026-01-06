@@ -57,7 +57,13 @@ export default function CodeExamples({
     () => ({
       curl: `curl "${fullUrl}"`,
 
-      javascript: `const response = await fetch("${fullUrl}");
+      javascript: `const params = new URLSearchParams({
+${Object.entries(buildParams)
+  .map(([k, v]) => `  ${k}: "${v}"`)
+  .join(',\n')}
+});
+
+const response = await fetch(\`${API_BASE}${endpoint}?\${params}\`);
 const data = await response.json();
 
 if (response.ok) {
@@ -76,7 +82,13 @@ interface ErrorResponse {
   message?: string;
 }
 
-const response = await fetch("${fullUrl}");
+const params = new URLSearchParams({
+${Object.entries(buildParams)
+  .map(([k, v]) => `  ${k}: "${v}"`)
+  .join(',\n')}
+});
+
+const response = await fetch(\`${API_BASE}${endpoint}?\${params}\`);
 
 if (response.ok) {
   const data: LyricsResponse = await response.json();
