@@ -40,39 +40,53 @@ export default function TableOfContents() {
 
     setItems(tocItems);
 
-    // Track active heading based on scroll position
+    // Track active heading based on scroll position (center of viewport)
     const updateActiveHeading = () => {
       // Skip if we're in click-scroll mode
       if (isClickScrolling.current) return;
 
       const headingElements = Array.from(headings);
+      if (headingElements.length === 0) return;
+
       const scrollY = window.scrollY;
-      const headerOffset = 100;
+      const viewportHeight = window.innerHeight;
+      const viewportCenter = scrollY + viewportHeight / 2;
 
       // Check if we're at the bottom of the page
-      const isAtBottom = window.innerHeight + scrollY >= document.documentElement.scrollHeight - 50;
+      const isAtBottom = viewportHeight + scrollY >= document.documentElement.scrollHeight - 50;
 
-      if (isAtBottom && headingElements.length > 0) {
+      if (isAtBottom) {
         // If at bottom, highlight the last heading
         setActiveId(headingElements[headingElements.length - 1].id);
         return;
       }
 
-      // Find the heading that's currently at or above the scroll position
-      let currentHeading = headingElements[0];
-      for (const heading of headingElements) {
-        const rect = heading.getBoundingClientRect();
-        const absoluteTop = rect.top + scrollY;
-        if (absoluteTop <= scrollY + headerOffset) {
-          currentHeading = heading;
-        } else {
+      // Check if we're at the top of the page
+      const isAtTop = scrollY < 100;
+      if (isAtTop && headingElements.length > 0) {
+        setActiveId(headingElements[0].id);
+        return;
+      }
+
+      // Find the heading whose section contains the viewport center
+      // A section spans from one heading to the next
+      let activeHeading = headingElements[0];
+      for (let i = 0; i < headingElements.length; i++) {
+        const heading = headingElements[i];
+        const headingTop = heading.getBoundingClientRect().top + scrollY;
+        const nextHeading = headingElements[i + 1];
+        const nextHeadingTop = nextHeading
+          ? nextHeading.getBoundingClientRect().top + scrollY
+          : document.documentElement.scrollHeight;
+
+        // Check if viewport center is within this section
+        if (viewportCenter >= headingTop && viewportCenter < nextHeadingTop) {
+          activeHeading = heading;
           break;
         }
       }
 
-      if (currentHeading) {
-        setActiveId(currentHeading.id);
-      }
+      setActiveId(activeHeading.id);
     };
 
     // Initial update
