@@ -253,6 +253,7 @@ function parseTime(timeStr) {
     <li>The <code>xml:lang</code> attribute specifies the target script (e.g., <code>ja-Latn</code> for Japanese romanization)</li>
     <li>Each <code>&lt;text for="..."&gt;</code> references a line by its <code>itunes:key</code> attribute</li>
     <li>Contains timed <code>&lt;span&gt;</code> elements, same as the main lyrics</li>
+    <li>Note: Some transliterations have punctuation (like <code>)</code>) outside of <code>&lt;span&gt;</code> elements as raw text nodes</li>
   </ul>
 
   <h2>Response headers</h2>
