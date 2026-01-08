@@ -37,7 +37,9 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
   </table>
 
   <h2>TTML structure</h2>
-  <p>The TTML document contains timing information for each word:</p>
+  <p>
+    The TTML document contains timing information for each word. For the full specification, see the <a href="https://www.w3.org/TR/2018/REC-ttml2-20181108/" target="_blank" rel="noopener">W3C TTML2 Recommendation</a>.
+  </p>
   <p class="note">Note: The example below is formatted for readability. Actual responses are not formatted - see the whitespace warning <a href="#important-whitespace-handling">here</a>.</p>
 
   <pre><code class="language-xml">{`<?xml version="1.0" encoding="UTF-8"?>
@@ -109,7 +111,7 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
   const lines = [];
 
   doc.querySelectorAll('p').forEach(p => {
-    const agent = p.getAttribute('ttm:agent'); // v1, v2, v1000, etc.
+    const agent = p.getAttribute('ttm:agent'); // Agent ID as defined in metadata (v1, v2, v1000, etc.)
     const words = [];
 
     // Recursively collect spans, tracking background vocal context
@@ -193,9 +195,25 @@ function parseTime(timeStr) {
   <span begin="0:08.456" end="0:10.123">Second </span>
   <span begin="0:10.123" end="0:11.789">vocalist</span>
 </p>`}</code></pre>
+  <p>
+    Agent IDs are defined in the TTML metadata header:
+  </p>
+  <pre><code class="language-xml">{`<head>
+  <metadata>
+    <ttm:agent type="person" xml:id="v1">
+      <ttm:name type="full">Artist Name</ttm:name>
+    </ttm:agent>
+    <ttm:agent type="person" xml:id="v2">
+      <ttm:name type="full">Featured Artist</ttm:name>
+    </ttm:agent>
+  </metadata>
+</head>`}</code></pre>
   <ul>
-    <li><code>v1</code>, <code>v2</code>, etc. identify different vocalists</li>
-    <li><code>v1000</code> indicates multiple speakers singing together</li>
+    <li>Agent IDs are defined via <code>&lt;ttm:agent xml:id="..."&gt;</code> in the metadata</li>
+    <li>Most files use <code>v1</code>, <code>v2</code>, etc., but some use different IDs like <code>voice1</code></li>
+    <li><code>v1000</code> (group) and <code>v2000</code> (other) conventionally indicate multiple speakers singing together</li>
+    <li>Agent metadata may include speaker names via <code>&lt;ttm:name&gt;</code></li>
+    <li>The <code>type</code> attribute must be one of: <code>person</code>, <code>character</code>, <code>group</code>, <code>organization</code>, or <code>other</code></li>
   </ul>
 
   <h2>Background vocals</h2>
@@ -209,6 +227,33 @@ function parseTime(timeStr) {
     <span begin="0:17.500" end="0:20.000">background vocals</span>
   </span>
 </p>`}</code></pre>
+
+  <h2>Transliterations</h2>
+  <p>
+    Some TTML responses include synced transliterations (e.g., romanized Japanese lyrics).
+    These are stored in the metadata header under <code>&lt;transliterations&gt;</code>:
+  </p>
+  <pre><code class="language-xml">{`<head>
+  <metadata>
+    <iTunesMetadata xmlns="http://music.apple.com/lyric-ttml-internal">
+      <transliterations>
+        <transliteration xml:lang="ja-Latn">
+          <text for="L10">
+            <span begin="1:03.557" end="1:04.868">mayonaka no</span>
+            <span begin="1:04.868" end="1:05.457">doa o</span>
+            <span begin="1:05.457" end="1:05.930">tata</span>
+            <span begin="1:05.930" end="1:07.907">ki</span>
+          </text>
+        </transliteration>
+      </transliterations>
+    </iTunesMetadata>
+  </metadata>
+</head>`}</code></pre>
+  <ul>
+    <li>The <code>xml:lang</code> attribute specifies the target script (e.g., <code>ja-Latn</code> for Japanese romanization)</li>
+    <li>Each <code>&lt;text for="..."&gt;</code> references a line by its <code>itunes:key</code> attribute</li>
+    <li>Contains timed <code>&lt;span&gt;</code> elements, same as the main lyrics</li>
+  </ul>
 
   <h2>Response headers</h2>
   <p>Additional context is provided via response headers:</p>

@@ -15,6 +15,11 @@ interface ParsedLine {
   bgText: string;
   words: ParsedWord[];
   agent?: string;
+  key?: string;
+  transliteration?: {
+    text: string;
+    words: ParsedWord[];
+  };
 }
 
 interface TimelineProps {
@@ -88,8 +93,33 @@ function parseTTML(ttml: string): ParsedLine[] {
     const doc = parser.parseFromString(ttml, "text/xml");
     const lines: ParsedLine[] = [];
 
+    // Parse transliterations from metadata
+    const transliterationMap = new Map<
+      string,
+      { text: string; words: ParsedWord[] }
+    >();
+    doc.querySelectorAll("transliteration text").forEach((textEl) => {
+      const forKey = textEl.getAttribute("for");
+      if (!forKey) return;
+
+      const words: ParsedWord[] = [];
+      textEl.querySelectorAll("span[begin]").forEach((span) => {
+        words.push({
+          begin: parseTime(span.getAttribute("begin") || ""),
+          end: parseTime(span.getAttribute("end") || ""),
+          text: span.textContent || "",
+        });
+      });
+
+      transliterationMap.set(forKey, {
+        text: textEl.textContent || "",
+        words,
+      });
+    });
+
     doc.querySelectorAll("p").forEach((p) => {
       const agent = p.getAttribute("ttm:agent") || undefined;
+      const key = p.getAttribute("itunes:key") || undefined;
       const words: ParsedWord[] = [];
 
       // Get background text from x-bg spans and lead text excluding them
@@ -137,6 +167,9 @@ function parseTTML(ttml: string): ParsedLine[] {
         });
       });
 
+      // Get transliteration if available
+      const transliteration = key ? transliterationMap.get(key) : undefined;
+
       lines.push({
         begin: parseTime(p.getAttribute("begin") || ""),
         end: parseTime(p.getAttribute("end") || ""),
@@ -145,6 +178,8 @@ function parseTTML(ttml: string): ParsedLine[] {
         bgText,
         words,
         agent,
+        key,
+        transliteration,
       });
     });
 
@@ -535,9 +570,7 @@ export default function Timeline({ ttml }: TimelineProps) {
                         className="speaker-badge"
                         style={{ backgroundColor: speakerColor }}
                       >
-                        {line.agent === "v1000"
-                          ? "All"
-                          : line.agent.toUpperCase()}
+                        {line.agent.toUpperCase()}
                       </span>
                     )}
                   </div>
@@ -553,6 +586,11 @@ export default function Timeline({ ttml }: TimelineProps) {
                       line.text.trim() || "[instrumental]"
                     )}
                   </div>
+                  {line.transliteration && (
+                    <div className="transliteration-text">
+                      {line.transliteration.text}
+                    </div>
+                  )}
                   {selectedLine === index && line.words.length > 0 && (
                     <div className="word-breakdown">
                       <div className="word-row">
@@ -584,6 +622,22 @@ export default function Timeline({ ttml }: TimelineProps) {
                             ))}
                         </div>
                       )}
+                      {line.transliteration &&
+                        line.transliteration.words.length > 0 && (
+                          <div className="word-row transliteration-row">
+                            {line.transliteration.words.map((word, wIndex) => (
+                              <span
+                                key={wIndex}
+                                className="word-item transliteration-word"
+                              >
+                                <span className="word-text">{word.text}</span>
+                                <span className="word-time">
+                                  {formatTime(word.begin)}
+                                </span>
+                              </span>
+                            ))}
+                          </div>
+                        )}
                     </div>
                   )}
                 </div>
@@ -878,6 +932,12 @@ export default function Timeline({ ttml }: TimelineProps) {
           font-size: 0.875rem;
         }
 
+        .transliteration-text {
+          font-size: 0.8125rem;
+          color: var(--text-muted);
+          margin-top: var(--space-1);
+        }
+
         .word-breakdown {
           margin-top: var(--space-3);
           padding-top: var(--space-3);
@@ -905,6 +965,15 @@ export default function Timeline({ ttml }: TimelineProps) {
         .word-item.background-word .word-text {
           font-style: italic;
           color: var(--text-secondary);
+        }
+
+        .transliteration-row {
+          border-top: 1px dashed var(--border);
+          padding-top: var(--space-2);
+        }
+
+        .word-item.transliteration-word .word-text {
+          color: var(--text-muted);
         }
 
         .word-text {
