@@ -3,6 +3,20 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
 ---
 
 <DocsLayout title="Authentication">
+  <div class="callout" role="note">
+    <svg class="callout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="10"></circle>
+      <line x1="12" y1="8" x2="12" y2="12"></line>
+      <line x1="12" y1="16" x2="12.01" y2="16"></line>
+    </svg>
+    <div class="callout-body">
+      <strong>API keys are not being issued right now.</strong>
+      Each cache miss hits a paid upstream provider, so issuing keys broadly isn't sustainable at the moment.
+      Cached responses cover the vast majority of songs and need no key. If you hit a song that isn't cached,
+      see <a href="#loading-uncached-songs">Loading uncached songs</a> below for a workaround.
+    </div>
+  </div>
+
   <p>
     The Better Lyrics API uses a <strong>cache-first authentication model</strong>.
     This means cached responses are always publicly accessible, while fresh fetches may require an API key.
@@ -36,7 +50,7 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
       </tr>
     </tbody>
   </table>
-  <p class="note">*Only when <code>API_KEY_REQUIRED</code> is enabled on the server. Contact the maintainer for access.</p>
+  <p class="note">*Only when <code>API_KEY_REQUIRED</code> is enabled on the server. Keys are currently not being issued to new users.</p>
 
   <h2>Using your API key</h2>
   <p>Pass your API key in the <code>X-API-Key</code> header:</p>
@@ -87,6 +101,23 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
 }`}</code></pre>
   <p>Status: <code>401 Unauthorized</code></p>
 
+  <h2 id="loading-uncached-songs">Loading uncached songs</h2>
+  <p>
+    If a song you need isn't cached, you can prime the cache by playing it once
+    through the <a href="https://better-lyrics.boidu.dev" target="_blank" rel="noopener noreferrer">Better Lyrics</a>
+    extension in YouTube Music. The extension fetches lyrics through the same
+    upstream the API uses, so after one playback the response is cached and
+    available to any caller, no key required.
+  </p>
+  <p>
+    This only works if the song exists upstream. If the extension can't find it
+    either, no amount of replaying will surface it.
+  </p>
+  <p>
+    If you have the lyrics yourself, you can upload them directly at
+    <a href="https://unison.boidu.dev" target="_blank" rel="noopener noreferrer">unison.boidu.dev</a>.
+  </p>
+
   <h2>Cache-first model explained</h2>
   <p>
     The cache-first model balances accessibility with resource protection:
@@ -110,5 +141,41 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
     font-size: 0.875rem;
     color: var(--text-muted);
     font-style: italic;
+  }
+  .callout {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    border: 1px solid var(--accent-border);
+    background: var(--accent-subtle);
+    padding: var(--space-4) var(--space-5);
+    border-radius: var(--radius-lg);
+    margin: 0 0 var(--space-6);
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: var(--text-secondary);
+  }
+  .callout-icon {
+    flex: 0 0 auto;
+    width: 1.125rem;
+    height: 1.125rem;
+    margin-top: 0.2rem;
+    color: var(--accent);
+  }
+  .callout-body {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .callout strong {
+    color: var(--text-primary);
+    font-weight: 600;
+  }
+  .callout a {
+    color: var(--text-primary);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .callout a:hover {
+    color: var(--accent-hover);
   }
 </style>

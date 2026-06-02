@@ -82,7 +82,10 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
 }`}</code></pre>
   <p>
     The requested lyrics are not cached and the server requires an API key for fresh fetches.
-    Either provide an API key or try a more popular song that may be cached.
+    Note that keys aren't being issued right now (see <a href="/docs/authentication">Authentication</a>).
+    If you have a key, pass it via <code>X-API-Key</code>. Otherwise, play the song once through the
+    <a href="https://better-lyrics.boidu.dev" target="_blank" rel="noopener noreferrer">Better Lyrics</a> extension
+    to prime the cache, then retry.
   </p>
 
   <h3>Rate limited (429)</h3>
