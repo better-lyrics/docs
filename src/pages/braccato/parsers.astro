@@ -1,0 +1,200 @@
+---
+import DocsLayout from '../../layouts/DocsLayout.astro';
+---
+
+<DocsLayout title="Parsers">
+  <p>
+    <code>@braccato/parsers</code> turns lyrics text into an array of <code>Lyric</code> objects.
+    It reads TTML, LRC, SRT, QRC and plain text, so one package covers every provider this API
+    serves. The output is what <a href="/braccato/renderer"><code>@braccato/core</code></a> renders,
+    but it is plain data and works without the renderer, in the browser or in Node.
+  </p>
+
+  <h2>Install</h2>
+  <pre><code class="language-bash">{`npm i @braccato/parsers`}</code></pre>
+
+  <h2>Detect the format</h2>
+  <p>
+    <code>detectParser</code> looks at the text and returns the parser that can read it. It tries
+    TTML, LRC, SRT, QRC and plain text, in that order. Plain text accepts anything, so you always get
+    a parser back.
+  </p>
+  <pre><code class="language-javascript">{`import { detectParser } from "@braccato/parsers";
+
+const lyrics = detectParser(text).parse(text, durationMs);`}</code></pre>
+  <p>
+    Every parser has the same two methods: <code>detect(input)</code> and
+    <code>parse(input, duration)</code>. The duration is the song length in
+    <strong>milliseconds</strong>. The API takes <code>d</code> in seconds, so multiply by 1000.
+  </p>
+  <p>You can also import a parser directly:</p>
+  <pre><code class="language-javascript">{`import { TTMLParser, LRCParser, SRTParser, QRCParser, PlainParser } from "@braccato/parsers";`}</code></pre>
+
+  <h2>The Lyric shape</h2>
+  <p>
+    Each <code>Lyric</code> is one line. Only <code>startTimeMs</code>, <code>durationMs</code> and
+    <code>words</code> are always present. The other fields depend on what the source provides.
+  </p>
+  <pre><code class="language-typescript">{`interface Lyric {
+  startTimeMs: number;
+  durationMs: number;
+  words: string;
+  key?: string;
+  parts?: LyricPart[];
+  agent?: string;
+  translations?: { [lang: string]: string };
+  romanization?: string;
+  timedRomanization?: LyricPart[];
+  isInstrumental?: boolean;
+}
+
+interface LyricPart {
+  startTimeMs: number;
+  durationMs: number;
+  words: string;
+  isBackground?: boolean;
+  explicit?: boolean;
+}`}</code></pre>
+  <table>
+    <thead>
+      <tr>
+        <th>Field</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>words</code></td>
+        <td>The full line text, background vocals included</td>
+      </tr>
+      <tr>
+        <td><code>parts</code></td>
+        <td>Syllable or word timing. A line without <code>parts</code> is line-synced</td>
+      </tr>
+      <tr>
+        <td><code>agent</code></td>
+        <td>The vocalist: <code>v1</code>, <code>v2</code>, and so on, with <code>v1000</code> for a group</td>
+      </tr>
+      <tr>
+        <td><code>key</code></td>
+        <td>The source's own line id, used to attach translations and romanizations</td>
+      </tr>
+      <tr>
+        <td><code>isInstrumental</code></td>
+        <td>A synthetic line with empty <code>words</code> that fills a gap nobody sings over</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>
+    The TTML and QRC parsers insert instrumental lines for gaps longer than 5 seconds: an intro before
+    the first line, and a break between two lines. They add an outro only when you pass the song
+    duration.
+  </p>
+  <p>
+    To use the types without the runtime code, import them from <code>@braccato/parsers</code>
+    (<code>import type</code>) or install <code>@braccato/types</code>.
+  </p>
+
+  <h2>TTML</h2>
+  <p>
+    The default <code>/getLyrics</code> endpoint returns the document in the <code>ttml</code> field.
+    Pass the string as received. Do not reformat it (see
+    <a href="/docs/response-format#important-whitespace-handling">whitespace handling</a>).
+  </p>
+  <pre><code class="language-javascript">{`import { TTMLParser } from "@braccato/parsers";
+
+const { ttml } = await fetch(url).then((response) => response.json());
+const lyrics = TTMLParser.parse(ttml);`}</code></pre>
+  <p>
+    The TTML parser reads syllable timing, <code>ttm:role="x-bg"</code> background vocals,
+    <code>ttm:agent</code> vocalists, explicit flags, <code>itunes:key</code>, translations and
+    transliterations. It maps agent ids to stable slots (<code>v1</code>, <code>v2</code>,
+    <code>v1000</code> for a group), so you do not need to know the ids a document declares.
+  </p>
+
+  <h3>parseTTMLContent</h3>
+  <p>
+    <code>TTMLParser.parse</code> ignores its duration argument, because a TTML document states its own
+    duration. Use <code>parseTTMLContent</code> when you also want the document language or sync level,
+    or when you want to give a fallback duration:
+  </p>
+  <pre><code class="language-javascript">{`import { parseTTMLContent } from "@braccato/parsers";
+
+const { lyrics, isWordSynced, language } = parseTTMLContent(ttml, {
+  songDurationMs: 170000,
+  instrumentalGapMs: 5000,
+});`}</code></pre>
+  <table>
+    <thead>
+      <tr>
+        <th>Option</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>songDurationMs</code></td>
+        <td>Used only when <code>&lt;body&gt;</code> has no <code>dur</code>. Needed for the outro instrumental line</td>
+      </tr>
+      <tr>
+        <td><code>instrumentalGapMs</code></td>
+        <td>Silence longer than this becomes an instrumental line. Defaults to 5000</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>
+    <code>language</code> comes from the document's <code>xml:lang</code>. You can pass it to the
+    renderer as <code>lyricsOptions.language</code>.
+  </p>
+
+  <h2>Kugou</h2>
+  <p>
+    <code>/kugou/getLyrics</code> returns LRC-style text in the <code>lyrics</code> field. It is
+    line-synced, so the parsed lines have no <code>parts</code>.
+  </p>
+  <pre><code class="language-javascript">{`import { LRCParser } from "@braccato/parsers";
+
+const { lyrics: lrc } = await fetch(url).then((response) => response.json());
+const lyrics = LRCParser.parse(lrc, durationSeconds * 1000);`}</code></pre>
+  <p>
+    <code>LRCParser.parse</code> also runs a set of timing fixers made for word-timed LRC. To get the
+    document exactly as written, use <code>parseLRC</code>, and run <code>lrcFixers</code> yourself if
+    you want them:
+  </p>
+  <pre><code class="language-javascript">{`import { parseLRC, lrcFixers } from "@braccato/parsers";
+
+const lyrics = parseLRC(lrc, durationSeconds * 1000);
+lrcFixers(lyrics);`}</code></pre>
+  <p><code>lrcFixers</code> changes the array in place.</p>
+
+  <h2>QQ</h2>
+  <p>
+    <code>/qq/getLyrics</code> returns a QRC document inside a <code>&lt;QrcInfos&gt;</code> XML
+    envelope in the <code>lyrics</code> field. The parser accepts the envelope or a bare QRC body.
+    See <a href="/docs/qrc-format">QRC format</a> for the structure.
+  </p>
+  <pre><code class="language-javascript">{`import { parseQRC } from "@braccato/parsers";
+
+const { lyrics: qrc } = await fetch(url).then((response) => response.json());
+const lyrics = parseQRC(qrc, durationSeconds * 1000, {
+  title: "Wanderlust",
+  artist: "The Weeknd",
+});`}</code></pre>
+  <p>The third argument is optional song metadata. The QRC parser:</p>
+  <ul>
+    <li>Skips header tags such as <code>[ti:]</code> and <code>[ar:]</code></li>
+    <li>Drops credit lines such as <code>Lyrics by：</code> and <code>Composed by：</code></li>
+    <li>With metadata, drops lines near the start that only repeat the title or artist</li>
+    <li>Turns a <code>Name:</code> prefix at the start of a line into an <code>agent</code>, and removes it from the text. The singer carries over to the next lines until a new prefix appears</li>
+  </ul>
+  <p>
+    <code>QRCParser.parse(input, duration)</code> does the same without metadata, and
+    <code>detectParser</code> returns <code>QRCParser</code> for a QQ response.
+  </p>
+
+  <h2>Parse once</h2>
+  <p>
+    Parsing is not free. Parse when the lyrics arrive, keep the result, and give the same array to the
+    renderer. Do not parse on every playback tick.
+  </p>
+</DocsLayout>

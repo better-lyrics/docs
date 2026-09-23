@@ -1,4 +1,5 @@
 ---
+import CodeTabs from '../../components/CodeTabs.astro';
 import DocsLayout from '../../layouts/DocsLayout.astro';
 ---
 
@@ -8,8 +9,10 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
     <code>/getLyrics</code>
   </p>
 
+  <p><a class="try-it" href="/playground?s=APT.&a=ROS%C3%89%2C+Bruno+Mars&al=APT.&d=170">Try it in the playground</a></p>
+
   <p>
-    Fetch synchronized lyrics for a song. Returns syllable-level timing data in TTML format.
+    Fetch synced lyrics for a song, with syllable-level timing in TTML format.
   </p>
 
   <h2>Parameters</h2>
@@ -26,29 +29,44 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
       <tr>
         <td><code>s</code>, <code>song</code>, <code>songName</code></td>
         <td>string</td>
-        <td>Yes</td>
+        <td>Always send</td>
         <td>Song title</td>
       </tr>
       <tr>
         <td><code>a</code>, <code>artist</code>, <code>artistName</code></td>
         <td>string</td>
-        <td>Yes</td>
+        <td>Always send</td>
         <td>Artist name</td>
       </tr>
       <tr>
         <td><code>al</code>, <code>album</code>, <code>albumName</code></td>
         <td>string</td>
-        <td>No</td>
-        <td>Album name (improves matching)</td>
+        <td>Always send</td>
+        <td>Album name</td>
       </tr>
       <tr>
         <td><code>d</code>, <code>duration</code></td>
-        <td>number</td>
+        <td>string of digits</td>
+        <td>Always send</td>
+        <td>Track duration in whole seconds, for example <code>154</code></td>
+      </tr>
+      <tr>
+        <td><code>videoId</code>, <code>v</code></td>
+        <td>string</td>
         <td>No</td>
-        <td>Track duration in seconds (improves matching)</td>
+        <td>Video ID of the track. It is stored with the song so that downstream caches can be refreshed. It does not change matching.</td>
       </tr>
     </tbody>
   </table>
+  <p class="note">
+    The API rejects a request (<code>422</code>) only when both song and artist are missing. Send all four
+    anyway: the cache key includes album and duration, so a request without them often misses the cached
+    entry and, without an API key, returns <code>401</code>.
+  </p>
+  <p class="note">
+    If you send more than one alias of a parameter (for example <code>s</code> and <code>song</code>),
+    the values are joined together. Send only one alias of each.
+  </p>
 
   <h2>Headers</h2>
   <table>
@@ -63,20 +81,76 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
       <tr>
         <td><code>X-API-Key</code></td>
         <td>Conditional</td>
-        <td>Required for cache misses (when API key mode is enabled) and rate limit bypass</td>
+        <td>Needed for cache misses when the server enforces API keys. A valid key also skips rate limiting.</td>
       </tr>
     </tbody>
   </table>
 
   <h2>Example request</h2>
-  <pre><code class="language-bash">curl "https://lyrics-api.boidu.dev/getLyrics?s=Shape%20of%20You&a=Ed%20Sheeran&d=234"</code></pre>
+  <CodeTabs tabs={[
+    { language: 'curl', code: `curl "https://api.betterlyrics.org/getLyrics?s=E85&a=Don%20Toliver&al=OCTANE&d=154"` },
+    { language: 'javascript', code: `const res = await fetch("https://api.betterlyrics.org/getLyrics?s=E85&a=Don%20Toliver&al=OCTANE&d=154");
+const { ttml } = await res.json();` },
+    { language: 'python', code: `import requests
+
+res = requests.get("https://api.betterlyrics.org/getLyrics?s=E85&a=Don%20Toliver&al=OCTANE&d=154")
+ttml = res.json()["ttml"]` },
+    { language: 'go', code: `package main
+
+import (
+	"fmt"
+	"io"
+	"net/http"
+)
+
+func main() {
+	res, err := http.Get("https://api.betterlyrics.org/getLyrics?s=E85&a=Don%20Toliver&al=OCTANE&d=154")
+	if err != nil {
+		panic(err)
+	}
+	defer res.Body.Close()
+
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(string(body))
+}` },
+  ]} />
 
   <h2>Success response</h2>
-  <p>Status: <code>200 OK</code></p>
+  <p>Status: <code>200 OK</code>, <code>Content-Type: application/json</code></p>
   <pre><code class="language-json">{`{
   "ttml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\"?>\\n<tt xmlns=\\"http://www.w3.org/ns/ttml\\">\\n  <body>\\n    <div>\\n      <p begin=\\"00:00:18.234\\" end=\\"00:00:21.891\\">\\n        <span begin=\\"00:00:18.234\\" end=\\"00:00:18.567\\">The </span>\\n        ...\\n      </p>\\n    </div>\\n  </body>\\n</tt>",
-  "score": 95
+  "score": 0.97
 }`}</code></pre>
+
+  <h2>Response fields</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Field</th>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>ttml</code></td>
+        <td>string</td>
+        <td>The TTML document</td>
+      </tr>
+      <tr>
+        <td><code>score</code></td>
+        <td>number</td>
+        <td>
+          Match confidence from <code>0</code> to <code>1</code>. Sent only when the lyrics were fetched
+          for this request, or when the request joined a fetch for the same query that was already in progress.
+          Cache hits and <code>STALE</code> responses have only <code>ttml</code>.
+        </td>
+      </tr>
+    </tbody>
+  </table>
 
   <h2>Response headers</h2>
   <table>
@@ -89,92 +163,143 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
     <tbody>
       <tr>
         <td><code>X-Cache-Status</code></td>
-        <td><code>HIT</code>, <code>MISS</code>, <code>NEGATIVE_HIT</code>, or <code>STALE</code></td>
-      </tr>
-      <tr>
-        <td><code>X-Provider</code></td>
-        <td><code>ttml</code></td>
+        <td><code>HIT</code>, <code>MISS</code>, <code>NEGATIVE_HIT</code>, or <code>STALE</code>. A request that joined a fetch already in progress gets <code>HIT</code>.</td>
       </tr>
       <tr>
         <td><code>X-RateLimit-Limit</code></td>
-        <td>Maximum requests in current tier</td>
+        <td>Burst size of the current rate limit tier. Not sent with a valid API key.</td>
       </tr>
       <tr>
         <td><code>X-RateLimit-Remaining</code></td>
-        <td>Requests remaining</td>
+        <td>Requests left in the current tier. Not sent with a valid API key.</td>
       </tr>
       <tr>
         <td><code>X-RateLimit-Type</code></td>
         <td><code>normal</code>, <code>cached</code>, <code>exceeded</code>, or <code>bypass</code></td>
       </tr>
       <tr>
+        <td><code>X-RateLimit-Bypass</code></td>
+        <td><code>true</code> when a valid API key skipped rate limiting</td>
+      </tr>
+      <tr>
         <td><code>X-Auth-Mode</code></td>
-        <td><code>authenticated</code>, <code>invalid</code>, or <code>cache</code></td>
+        <td><code>authenticated</code>, <code>invalid</code>, or <code>cache</code>. Sent only when the server enforces API keys.</td>
+      </tr>
+      <tr>
+        <td><code>Retry-After</code></td>
+        <td>Seconds to wait. Only on <code>429</code> responses.</td>
       </tr>
     </tbody>
   </table>
+  <p>
+    <code>/getLyrics</code> does not send <code>X-Provider</code>. See
+    <a href="#provider-specific-endpoints">Provider-specific endpoints</a> for the endpoints that do.
+  </p>
 
   <h2>Error responses</h2>
+  <p>All error responses are JSON, except <code>422</code> and the <code>429</code> sent when both rate limit tiers are exhausted, which are plain text.</p>
 
   <h3>Missing parameters (422)</h3>
+  <p>Sent when neither song nor artist is given. <code>Content-Type: text/plain</code>:</p>
+  <pre><code>Song name or artist name not provided</code></pre>
+
+  <h3>API key required (401)</h3>
+  <p>The query is not cached, the server enforces API keys, and the request has no key:</p>
   <pre><code class="language-json">{`{
-  "error": "Song name and artist name are required"
+  "error": "API key required",
+  "message": "Uncached queries require a valid API key via X-API-Key header"
+}`}</code></pre>
+  <p>With a wrong key:</p>
+  <pre><code class="language-json">{`{
+  "error": "Invalid API key",
+  "message": "The provided API key is not valid"
 }`}</code></pre>
 
   <h3>Not found (404)</h3>
   <pre><code class="language-json">{`{
   "error": "Lyrics not available for this track"
 }`}</code></pre>
+  <p>
+    The <code>error</code> text depends on why no lyrics were found. This result is cached, and later
+    requests for the same query get <code>X-Cache-Status: NEGATIVE_HIT</code>.
+  </p>
 
   <h3>Rate limited (429)</h3>
+  <p>
+    Both rate limit tiers are exhausted. <code>Content-Type: text/plain</code>,
+    <code>Retry-After: 1</code>, <code>X-RateLimit-Type: exceeded</code>:
+  </p>
+  <pre><code>Too Many Requests</code></pre>
+  <p>
+    The normal tier is exhausted and the query is not cached, so the cached tier cannot serve it.
+    JSON, <code>Retry-After: 60</code>, <code>X-RateLimit-Type: cached</code>:
+  </p>
   <pre><code class="language-json">{`{
   "error": "Rate limit exceeded. This request requires cached data, but no cache is available for this query.",
   "message": "Please try again later or reduce your request rate."
 }`}</code></pre>
 
-  <h3>API key required (401)</h3>
+  <h3>Upstream error (500)</h3>
+  <p>The upstream fetch failed and no cached fallback exists. The <code>error</code> text is the upstream error:</p>
   <pre><code class="language-json">{`{
-  "error": "API key required",
-  "message": "Uncached queries require a valid API key via X-API-Key header"
+  "error": "<upstream error message>"
 }`}</code></pre>
 
-  <h2>Provider-specific endpoints</h2>
+  <h3>Cache-only mode (503)</h3>
+  <p>The server is temporarily serving only cached lyrics and the query is not cached:</p>
+  <pre><code class="language-json">{`{
+  "error": "Service running in cache-only mode. No cached lyrics available for this query."
+}`}</code></pre>
+
+  <h2 id="provider-specific-endpoints">Provider-specific endpoints</h2>
   <p>
-    You can also use provider-specific endpoints for different lyrics sources:
+    These endpoints select one provider. They take the same <code>s</code>, <code>a</code>, <code>al</code>
+    and <code>d</code> parameters (but not <code>videoId</code>), and return the same <code>422</code> and
+    rate limit responses.
   </p>
+  <table>
+    <thead>
+      <tr>
+        <th>Endpoint</th>
+        <th>Format</th>
+        <th>Timing</th>
+        <th>API key for cache misses</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>/ttml/getLyrics</code></td>
+        <td>TTML</td>
+        <td>Syllable-level</td>
+        <td>When the server enforces API keys</td>
+      </tr>
+      <tr>
+        <td><code>/kugou/getLyrics</code></td>
+        <td>LRC-style text</td>
+        <td>Line-level</td>
+        <td>Never</td>
+      </tr>
+      <tr>
+        <td><code>/qq/getLyrics</code></td>
+        <td><a href="/docs/qrc-format">QRC</a></td>
+        <td>Word-level</td>
+        <td>Never</td>
+      </tr>
+    </tbody>
+  </table>
+  <pre><code class="language-json">{`{
+  "lyrics": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\"?>...",
+  "provider": "ttml"
+}`}</code></pre>
+  <p>They differ from <code>/getLyrics</code> in these ways:</p>
   <ul>
-    <li><code>/ttml/getLyrics</code> - Same as <code>/getLyrics</code></li>
-    <li><code>/kugou/getLyrics</code> - Kugou provider (line-level timing)</li>
-    <li><code>/legacy/getLyrics</code> - Legacy provider (deprecated)</li>
+    <li>The body is <code>lyrics</code> and <code>provider</code>, not <code>ttml</code>. There is no <code>score</code>.</li>
+    <li>Every JSON response, errors included, has an <code>X-Provider</code> header with the provider name. JSON error bodies also have a <code>provider</code> field.</li>
+    <li>Cache lookups use the exact cache key. There is no duration tolerance and no <code>STALE</code> fallback.</li>
+    <li>
+      <code>/ttml/getLyrics</code> builds its cache keys in a different format from <code>/getLyrics</code>. When you send an
+      album or a duration, the two endpoints do not share cache entries.
+    </li>
+    <li><code>X-Auth-Mode</code> is sent only by <code>/ttml/getLyrics</code>, and only when the server enforces API keys.</li>
   </ul>
 </DocsLayout>
-
-<style>
-  .endpoint-badge {
-    display: flex;
-    align-items: center;
-    gap: var(--space-3);
-    margin-bottom: var(--space-6);
-  }
-
-  .method {
-    background-color: rgba(34, 197, 94, 0.1);
-    color: var(--success);
-    font-size: 0.75rem;
-    font-weight: 700;
-    padding: var(--space-1) var(--space-2);
-    border-radius: var(--radius-sm);
-  }
-
-  .endpoint-badge code {
-    font-size: 1.125rem;
-    background: none;
-    padding: 0;
-  }
-
-  .note {
-    font-size: 0.875rem;
-    color: var(--text-muted);
-    font-style: italic;
-  }
-</style>

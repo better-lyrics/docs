@@ -1,4 +1,5 @@
 ---
+import CodeTabs from '../../components/CodeTabs.astro';
 import DocsLayout from '../../layouts/DocsLayout.astro';
 ---
 
@@ -8,9 +9,11 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
     <code>/health</code>
   </p>
 
+  <p><a class="try-it" href="https://api.betterlyrics.org/health" target="_blank" rel="noopener noreferrer">Open /health</a></p>
+
   <p>
-    Check API health status. Returns basic status for unauthenticated requests,
-    detailed token status for authenticated requests.
+    Check whether the API is healthy. Always returns <code>200 OK</code>, so read the <code>status</code> field for the result.
+    With the cache access token, the response also lists the status of each upstream token.
   </p>
 
   <h2>Headers (optional)</h2>
@@ -32,13 +35,44 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
   </table>
 
   <h2>Example request (basic)</h2>
-  <pre><code class="language-bash">curl "https://lyrics-api.boidu.dev/health"</code></pre>
+  <CodeTabs tabs={[
+    { language: 'curl', code: `curl "https://api.betterlyrics.org/health"` },
+    { language: 'javascript', code: `const res = await fetch("https://api.betterlyrics.org/health");
+const data = await res.json();` },
+    { language: 'python', code: `import requests
+
+res = requests.get("https://api.betterlyrics.org/health")
+data = res.json()` },
+    { language: 'go', code: `package main
+
+import (
+	"fmt"
+	"io"
+	"net/http"
+)
+
+func main() {
+	res, err := http.Get("https://api.betterlyrics.org/health")
+	if err != nil {
+		panic(err)
+	}
+	defer res.Body.Close()
+
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(string(body))
+}` },
+  ]} />
 
   <h2>Basic response</h2>
-  <p>Status: <code>200 OK</code></p>
+  <p>Status: <code>200 OK</code>, <code>Content-Type: application/json</code></p>
   <pre><code class="language-json">{`{
   "status": "ok",
   "accounts": 2,
+  "accounts_active": 2,
+  "accounts_out_of_service": 0,
   "circuit_breaker": "CLOSED",
   "cache_ready": true
 }`}</code></pre>
@@ -61,17 +95,37 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
       <tr>
         <td><code>accounts</code></td>
         <td>number</td>
-        <td>Number of configured provider accounts</td>
+        <td>Number of configured upstream accounts</td>
+      </tr>
+      <tr>
+        <td><code>accounts_active</code></td>
+        <td>number</td>
+        <td>Accounts that are in service</td>
+      </tr>
+      <tr>
+        <td><code>accounts_out_of_service</code></td>
+        <td>number</td>
+        <td>Accounts that are configured but out of service</td>
       </tr>
       <tr>
         <td><code>circuit_breaker</code></td>
         <td>string</td>
-        <td><code>CLOSED</code>, <code>OPEN</code>, or <code>HALF_OPEN</code></td>
+        <td><code>CLOSED</code>, <code>OPEN</code>, <code>HALF-OPEN</code>, <code>UNINITIALIZED</code> (not started yet), or <code>UNKNOWN</code></td>
+      </tr>
+      <tr>
+        <td><code>circuit_breaker_retry_in</code></td>
+        <td>string</td>
+        <td>Time until the circuit breaker lets a test request through, for example <code>4m30s</code>. Only when <code>circuit_breaker</code> is <code>OPEN</code>.</td>
       </tr>
       <tr>
         <td><code>cache_ready</code></td>
         <td>boolean</td>
-        <td>Whether the cache is initialized and ready</td>
+        <td>Whether the cache is ready</td>
+      </tr>
+      <tr>
+        <td><code>error</code></td>
+        <td>string</td>
+        <td>Why the service is unhealthy. Only when <code>status</code> is <code>unhealthy</code>.</td>
       </tr>
     </tbody>
   </table>
@@ -91,98 +145,223 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
       </tr>
       <tr>
         <td><code>degraded</code></td>
-        <td>Some functionality limited (e.g., circuit breaker open, tokens expiring)</td>
+        <td>The circuit breaker is <code>OPEN</code>. With the cache access token, also when an account token is <code>unhealthy</code>.</td>
       </tr>
       <tr>
         <td><code>unhealthy</code></td>
-        <td>Critical issue (e.g., no accounts configured)</td>
+        <td>No account is in service (none configured, or all out of service). See <code>error</code>.</td>
       </tr>
     </tbody>
   </table>
+  <p class="note">
+    Token checks affect <code>status</code> only when the request has the cache access token, so an
+    authenticated request can report <code>degraded</code> while a basic request reports <code>ok</code>.
+  </p>
 
   <h2>Authenticated response</h2>
-  <p>With the <code>Authorization</code> header, additional details are returned:</p>
-  <pre><code class="language-bash">curl -H "Authorization: your-cache-token" \
-  "https://lyrics-api.boidu.dev/health"</code></pre>
+  <p>With the <code>Authorization</code> header, the response includes more detail:</p>
+  <CodeTabs tabs={[
+    { language: 'curl', code: `curl -H "Authorization: your-cache-token" \\
+  "https://api.betterlyrics.org/health"` },
+    { language: 'javascript', code: `const res = await fetch("https://api.betterlyrics.org/health", {
+  headers: { "Authorization": "your-cache-token" },
+});
+const data = await res.json();` },
+    { language: 'python', code: `import requests
+
+res = requests.get(
+    "https://api.betterlyrics.org/health",
+    headers={"Authorization": "your-cache-token"},
+)
+data = res.json()` },
+    { language: 'go', code: `package main
+
+import (
+	"fmt"
+	"io"
+	"net/http"
+)
+
+func main() {
+	req, err := http.NewRequest(http.MethodGet, "https://api.betterlyrics.org/health", nil)
+	if err != nil {
+		panic(err)
+	}
+	req.Header.Set("Authorization", "your-cache-token")
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		panic(err)
+	}
+	defer res.Body.Close()
+
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(string(body))
+}` },
+  ]} />
 
   <pre><code class="language-json">{`{
   "status": "ok",
   "accounts": 2,
+  "accounts_active": 2,
+  "accounts_out_of_service": 0,
   "circuit_breaker": "CLOSED",
   "cache_ready": true,
   "circuit_breaker_failures": 0,
   "tokens": [
     {
-      "name": "account-1",
+      "name": "shared_bearer_token",
+      "type": "bearer",
       "status": "healthy",
-      "expires": "2025-03-15 12:00:00",
-      "days_remaining": 68
+      "expires": "2026-09-30 12:00:00",
+      "remaining_minutes": 10080
+    },
+    {
+      "name": "account-1",
+      "type": "mut",
+      "status": "healthy",
+      "last_checked": "2026-09-23T11:00:00Z"
     },
     {
       "name": "account-2",
-      "status": "expiring_soon",
-      "expires": "2025-01-12 08:30:00",
-      "days_remaining": 6
+      "type": "mut",
+      "status": "unknown",
+      "note": "health check not yet run"
     }
   ]
 }`}</code></pre>
 
-  <h2>Token status values</h2>
+  <h2>Additional fields</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Field</th>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>circuit_breaker_failures</code></td>
+        <td>number</td>
+        <td>Current failure count of the circuit breaker</td>
+      </tr>
+      <tr>
+        <td><code>tokens</code></td>
+        <td>array</td>
+        <td>One entry for the shared token and one for each account</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Token fields</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Field</th>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>name</code></td>
+        <td>string</td>
+        <td><code>shared_bearer_token</code> for the shared token, or the account name</td>
+      </tr>
+      <tr>
+        <td><code>type</code></td>
+        <td>string</td>
+        <td><code>bearer</code> for the shared token, <code>mut</code> for an account token</td>
+      </tr>
+      <tr>
+        <td><code>status</code></td>
+        <td>string</td>
+        <td>See <a href="#token-status-values">Token status values</a></td>
+      </tr>
+      <tr>
+        <td><code>expires</code></td>
+        <td>string</td>
+        <td>Expiry time as <code>YYYY-MM-DD HH:MM:SS</code>. <code>bearer</code> only, when initialized.</td>
+      </tr>
+      <tr>
+        <td><code>remaining_minutes</code></td>
+        <td>number</td>
+        <td>Minutes until expiry. <code>bearer</code> only, when initialized.</td>
+      </tr>
+      <tr>
+        <td><code>last_checked</code></td>
+        <td>string</td>
+        <td>Time of the last health check (RFC 3339). <code>mut</code> only, after a check has run.</td>
+      </tr>
+      <tr>
+        <td><code>last_error</code></td>
+        <td>string</td>
+        <td>Error from the last health check. Only when <code>status</code> is <code>unhealthy</code>.</td>
+      </tr>
+      <tr>
+        <td><code>reason</code></td>
+        <td>string</td>
+        <td>Why the account is out of service. Only when <code>status</code> is <code>out_of_service</code>.</td>
+      </tr>
+      <tr>
+        <td><code>note</code></td>
+        <td>string</td>
+        <td>Only when <code>status</code> is <code>unknown</code></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2 id="token-status-values">Token status values</h2>
   <table>
     <thead>
       <tr>
         <th>Status</th>
+        <th>Type</th>
         <th>Meaning</th>
       </tr>
     </thead>
     <tbody>
       <tr>
         <td><code>healthy</code></td>
-        <td>Token valid with more than 7 days remaining</td>
+        <td><code>bearer</code>, <code>mut</code></td>
+        <td>Token is valid</td>
       </tr>
       <tr>
-        <td><code>expiring_soon</code></td>
-        <td>Token valid but expiring within 7 days</td>
+        <td><code>refreshing_soon</code></td>
+        <td><code>bearer</code></td>
+        <td>Token is valid and will be refreshed soon</td>
       </tr>
       <tr>
-        <td><code>expired</code></td>
-        <td>Token has expired</td>
+        <td><code>not_initialized</code></td>
+        <td><code>bearer</code></td>
+        <td>Token has not been fetched yet</td>
       </tr>
       <tr>
-        <td><code>error</code></td>
-        <td>Could not determine token status</td>
+        <td><code>unhealthy</code></td>
+        <td><code>mut</code></td>
+        <td>The last health check failed. See <code>last_error</code>.</td>
+      </tr>
+      <tr>
+        <td><code>out_of_service</code></td>
+        <td><code>mut</code></td>
+        <td>Account has no credentials and is not used</td>
+      </tr>
+      <tr>
+        <td><code>unknown</code></td>
+        <td><code>mut</code></td>
+        <td>No health check has run yet</td>
       </tr>
     </tbody>
   </table>
 
   <h2>Use cases</h2>
   <ul>
-    <li><strong>Monitoring</strong> - Set up health checks for your integration</li>
-    <li><strong>Debugging</strong> - Verify API is reachable and functioning</li>
-    <li><strong>Status pages</strong> - Display API status in your application</li>
+    <li>Health checks in your own monitoring</li>
+    <li>Checking that the API is reachable and working while you debug</li>
+    <li>Showing API status on a status page or in your app</li>
   </ul>
 </DocsLayout>
-
-<style>
-  .endpoint-badge {
-    display: flex;
-    align-items: center;
-    gap: var(--space-3);
-    margin-bottom: var(--space-6);
-  }
-
-  .method {
-    background-color: rgba(34, 197, 94, 0.1);
-    color: var(--success);
-    font-size: 0.75rem;
-    font-weight: 700;
-    padding: var(--space-1) var(--space-2);
-    border-radius: var(--radius-sm);
-  }
-
-  .endpoint-badge code {
-    font-size: 1.125rem;
-    background: none;
-    padding: 0;
-  }
-</style>

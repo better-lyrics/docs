@@ -1,0 +1,156 @@
+---
+import DocsLayout from '../../layouts/DocsLayout.astro';
+import BraccatoExample from '../../components/BraccatoExample';
+
+const PACKAGES = ['core', 'parsers', 'provider-blyrics', 'types', 'rics'] as const;
+
+async function latestVersion(name: string): Promise<string> {
+  try {
+    const res = await fetch(`https://registry.npmjs.org/@braccato/${name}/latest`);
+    if (!res.ok) return 'latest';
+    const { version } = await res.json();
+    return version;
+  } catch {
+    return 'latest';
+  }
+}
+
+const versions = Object.fromEntries(
+  await Promise.all(PACKAGES.map(async (name) => [name, await latestVersion(name)])),
+) as Record<(typeof PACKAGES)[number], string>;
+---
+
+<DocsLayout title="Overview">
+  <p>
+    Braccato is the Better Lyrics rendering engine and its lyric parsers, published as npm packages.
+    Use it to parse any response from this API into one shape, then render it with syllable-level
+    highlighting and autoscroll.
+  </p>
+  <p>
+    It is the same code that runs inside the Better Lyrics extension, packaged so you can use it in
+    your own player, site, or app.
+  </p>
+  <ul>
+    <li>Demo and docs: <a href="https://braccato.boidu.dev" target="_blank" rel="noopener noreferrer">braccato.boidu.dev</a></li>
+    <li>Source: <a href="https://github.com/better-lyrics/braccato" target="_blank" rel="noopener noreferrer">github.com/better-lyrics/braccato</a> (MIT)</li>
+  </ul>
+
+  <h2>Packages</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Package</th>
+        <th>Version</th>
+        <th>What it does</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a href="/braccato/renderer"><code>@braccato/core</code></a></td>
+        <td><code set:text={versions['core']} /></td>
+        <td>The <code>&lt;braccato-lyrics&gt;</code> custom element that renders synced lyrics</td>
+      </tr>
+      <tr>
+        <td><a href="/braccato/parsers"><code>@braccato/parsers</code></a></td>
+        <td><code set:text={versions['parsers']} /></td>
+        <td>TTML, LRC, SRT, QRC and plain text parsers, with format detection</td>
+      </tr>
+      <tr>
+        <td><a href="/braccato/provider"><code>@braccato/provider-blyrics</code></a></td>
+        <td><code set:text={versions['provider-blyrics']} /></td>
+        <td>A provider chain that fetches from several lyrics sources in priority order</td>
+      </tr>
+      <tr>
+        <td><code>@braccato/types</code></td>
+        <td><code set:text={versions['types']} /></td>
+        <td>The shared <code>Lyric</code> and <code>LyricPart</code> types. Types only, and re-exported by core and parsers</td>
+      </tr>
+      <tr>
+        <td><code>@braccato/rics</code></td>
+        <td><code set:text={versions['rics']} /></td>
+        <td>Compiles RICS theme source to plain CSS</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>
+    Most projects need <code>@braccato/core</code> and <code>@braccato/provider-blyrics</code>. Add
+    <code>@braccato/parsers</code> when you call this API yourself.
+  </p>
+
+  <h2>Quickstart</h2>
+  <div class="quickstart">
+    <BraccatoExample
+      client:visible
+      song="APT."
+      artist="ROSÉ, Bruno Mars"
+      album="APT."
+      duration="170"
+      title="The minimal setup"
+      docsHref="/braccato/provider"
+      docsLabel="Provider chain docs"
+    >
+      <p>
+        Register the providers once, ask for a song, and hand the result to
+        <code>&lt;braccato-lyrics&gt;</code>. If a provider has nothing for the song, the chain tries the next one.
+      </p>
+    </BraccatoExample>
+  </div>
+
+  <h3>Add the element</h3>
+  <p>
+    Put the media element before the lyrics element, so the <code>source</code> selector resolves
+    when the element connects. Give the element a height and let it scroll.
+  </p>
+  <pre><code class="language-markup">{`<audio id="player" src="song.mp3" controls></audio>
+<braccato-lyrics source="#player"></braccato-lyrics>
+
+<style>
+  braccato-lyrics {
+    display: block;
+    height: 60vh;
+    overflow-y: auto;
+  }
+</style>`}</code></pre>
+  <p>
+    With <code>source</code> set, the element reads the playback position from the
+    <code>&lt;audio&gt;</code> element on its own, and a click on a line seeks it.
+  </p>
+
+  <h3>Drive the clock yourself</h3>
+  <p>
+    If your player is not a media element (an embedded player, a native bridge, a remote device),
+    leave out <code>source</code> and write the position on every frame. <code>currentTime</code>
+    is in seconds.
+  </p>
+  <pre><code class="language-javascript">{`function tick() {
+  view.currentTime = player.getCurrentTime();
+  view.playing = player.isPlaying();
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+
+view.addEventListener("braccato:line-click", (event) => {
+  player.seekTo(event.detail.timeS);
+});`}</code></pre>
+
+  <h2>Next steps</h2>
+  <ul>
+    <li><a href="/braccato/parsers">Parsers</a>: parse the TTML, Kugou and QQ responses</li>
+    <li><a href="/braccato/renderer">Renderer</a>: properties, events, scrolling and theming</li>
+    <li><a href="/braccato/provider">Provider</a>: fetch from several sources with fallback</li>
+  </ul>
+</DocsLayout>
+
+<style>
+  .quickstart {
+    margin: var(--space-4) 0 var(--space-8);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-xl);
+    background-color: var(--surface-panel);
+    overflow: clip;
+  }
+
+  .quickstart :global(.bx) {
+    border-top: none;
+  }
+</style>

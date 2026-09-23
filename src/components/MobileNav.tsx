@@ -1,18 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import Search from './Search';
-
-interface NavLink {
-  href: string;
-  label: string;
-}
+import { navSections } from '../nav';
 
 interface Props {
   currentPath: string;
-  conceptsLinks: NavLink[];
-  referenceLinks: NavLink[];
 }
 
-export default function MobileNav({ currentPath, conceptsLinks, referenceLinks }: Props) {
+export default function MobileNav({ currentPath }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
@@ -92,61 +86,23 @@ export default function MobileNav({ currentPath, conceptsLinks, referenceLinks }
                 <Search />
               </div>
 
-              <div className="mobile-nav-section">
-                <h4 className="mobile-nav-section-title">Concepts</h4>
-                <ul className="mobile-nav-list">
-                  {conceptsLinks.map(link => (
-                    <li key={link.href}>
-                      <a
-                        href={link.href}
-                        className={`mobile-nav-item ${currentPath === link.href ? 'active' : ''}`}
-                      >
-                        {link.label}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="mobile-nav-section">
-                <h4 className="mobile-nav-section-title">Reference</h4>
-                <ul className="mobile-nav-list">
-                  {referenceLinks.map(link => (
-                    <li key={link.href}>
-                      <a
-                        href={link.href}
-                        className={`mobile-nav-item ${currentPath === link.href ? 'active' : ''}`}
-                      >
-                        {link.label}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="mobile-nav-section">
-                <h4 className="mobile-nav-section-title">Quick links</h4>
-                <ul className="mobile-nav-list">
-                  <li>
-                    <a href="/playground" className={`mobile-nav-item ${currentPath === '/playground' ? 'active' : ''}`}>
-                      Playground
-                    </a>
-                  </li>
-                  <li>
-                    <a
-                      href="https://better-lyrics.boidu.dev"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mobile-nav-item external"
-                    >
-                      Get the extension
-                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M4 8L8 4M8 4H4.5M8 4V7.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    </a>
-                  </li>
-                </ul>
-              </div>
+              {navSections.map(section => (
+                <div key={section.title} className="mobile-nav-section">
+                  <h4 className="mobile-nav-section-title">{section.title}</h4>
+                  <ul className="mobile-nav-list">
+                    {section.links.map(link => (
+                      <li key={link.href}>
+                        <a
+                          href={link.href}
+                          className={`mobile-nav-item ${currentPath === link.href ? 'active' : ''}`}
+                        >
+                          {link.label}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
             </div>
           </nav>
         </div>
@@ -182,7 +138,7 @@ export default function MobileNav({ currentPath, conceptsLinks, referenceLinks }
         .mobile-nav-backdrop {
           position: fixed;
           inset: 0;
-          background-color: rgba(0, 0, 0, 0.8);
+          background-color: rgba(0, 0, 0, 0.6);
           z-index: 200;
           animation: backdropFadeIn 0.2s ease-out forwards;
         }
@@ -257,7 +213,7 @@ export default function MobileNav({ currentPath, conceptsLinks, referenceLinks }
 
         .mobile-nav-close:hover {
           color: var(--text-primary);
-          background-color: var(--bg-secondary);
+          background-color: var(--bg-tertiary);
         }
 
         .mobile-nav-content {
@@ -276,27 +232,26 @@ export default function MobileNav({ currentPath, conceptsLinks, referenceLinks }
 
         .mobile-nav-section-title {
           font-size: 0.75rem;
-          font-weight: 600;
+          font-weight: 500;
           color: var(--text-muted);
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
-          margin-bottom: var(--space-3);
+          margin-bottom: var(--space-2);
+          padding: 0 var(--space-3);
         }
 
         .mobile-nav-list {
           list-style: none;
           display: flex;
           flex-direction: column;
-          gap: var(--space-1);
+          gap: 2px;
         }
 
         .mobile-nav-item {
           display: flex;
           align-items: center;
           gap: var(--space-2);
-          padding: var(--space-3) var(--space-4);
+          padding: var(--space-2) var(--space-3);
           border-radius: var(--radius-md);
-          font-size: 0.9375rem;
+          font-size: 0.875rem;
           color: var(--text-secondary);
           text-decoration: none;
           transition: all var(--transition-fast);
@@ -304,7 +259,7 @@ export default function MobileNav({ currentPath, conceptsLinks, referenceLinks }
 
         .mobile-nav-item:hover {
           color: var(--text-primary);
-          background-color: var(--bg-secondary);
+          background-color: var(--bg-tertiary);
         }
 
         .mobile-nav-item.active {
@@ -313,13 +268,6 @@ export default function MobileNav({ currentPath, conceptsLinks, referenceLinks }
           font-weight: 500;
         }
 
-        .mobile-nav-item.external {
-          color: var(--accent);
-        }
-
-        .mobile-nav-item.external:hover {
-          background-color: var(--accent-subtle);
-        }
       `}</style>
     </>
   );

@@ -11,6 +11,8 @@ export default function TableOfContents() {
   const [activeId, setActiveId] = useState<string>('');
   const isClickScrolling = useRef(false);
   const clickedId = useRef<string>('');
+  const railRef = useRef<HTMLDivElement>(null);
+  const [indicator, setIndicator] = useState<{ top: number; height: number; animate: boolean } | null>(null);
 
   useEffect(() => {
     // Find all h2 and h3 elements in the article
@@ -109,6 +111,12 @@ export default function TableOfContents() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  useEffect(() => {
+    const link = railRef.current?.querySelector<HTMLElement>('.toc-link.active');
+    if (!link) return;
+    setIndicator((prev) => ({ top: link.offsetTop, height: link.offsetHeight, animate: prev !== null }));
+  }, [activeId, items]);
+
   const handleClick = (e: React.MouseEvent, id: string) => {
     e.preventDefault();
     const element = document.getElementById(id);
@@ -133,19 +141,28 @@ export default function TableOfContents() {
   return (
     <nav className="toc">
       <h4 className="toc-title">On this page</h4>
-      <ul className="toc-list">
-        {items.map((item) => (
-          <li key={item.id} className={`toc-item level-${item.level}`}>
-            <a
-              href={`#${item.id}`}
-              className={`toc-link ${activeId === item.id ? 'active' : ''}`}
-              onClick={(e) => handleClick(e, item.id)}
-            >
-              {item.text}
-            </a>
-          </li>
-        ))}
-      </ul>
+      <div className="toc-rail" ref={railRef}>
+        {indicator && (
+          <span
+            className={`toc-indicator ${indicator.animate ? 'animate' : ''}`}
+            style={{ transform: `translateY(${indicator.top}px)`, height: indicator.height }}
+            aria-hidden="true"
+          />
+        )}
+        <ul className="toc-list">
+          {items.map((item) => (
+            <li key={item.id} className={`toc-item level-${item.level}`}>
+              <a
+                href={`#${item.id}`}
+                className={`toc-link ${activeId === item.id ? 'active' : ''}`}
+                onClick={(e) => handleClick(e, item.id)}
+              >
+                {item.text}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
 
       <style>{`
         .toc {
@@ -158,11 +175,34 @@ export default function TableOfContents() {
 
         .toc-title {
           font-size: 0.75rem;
-          font-weight: 600;
+          font-weight: 500;
           color: var(--text-muted);
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
-          margin: 0 0 var(--space-3);
+          margin: 0 0 var(--space-2);
+        }
+
+        .toc-rail {
+          position: relative;
+        }
+
+        .toc-indicator {
+          position: absolute;
+          top: 0;
+          left: 0;
+          z-index: 1;
+          width: 2px;
+          border-radius: var(--radius-full);
+          background-color: var(--accent);
+          pointer-events: none;
+        }
+
+        .toc-indicator.animate {
+          transition: transform 300ms cubic-bezier(0.22, 1, 0.36, 1), height 300ms cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .toc-indicator.animate {
+            transition: none;
+          }
         }
 
         .toc-list {
@@ -171,25 +211,23 @@ export default function TableOfContents() {
           padding: 0;
           display: flex;
           flex-direction: column;
-          gap: var(--space-1);
         }
 
         .toc-item {
           margin: 0;
         }
 
-        .toc-item.level-3 {
-          padding-left: var(--space-4);
+        .toc-item.level-3 .toc-link {
+          padding-left: var(--space-6);
         }
 
         .toc-link {
           display: block;
-          padding: var(--space-1) var(--space-2);
+          padding: 0.125rem var(--space-3);
           font-size: 0.8125rem;
           color: var(--text-muted);
-          text-decoration: none;
-          border-left: 2px solid transparent;
-          transition: all var(--transition-fast);
+          border-left: 1px solid var(--border);
+          transition: color var(--transition-fast);
           line-height: 1.4;
         }
 
@@ -199,7 +237,6 @@ export default function TableOfContents() {
 
         .toc-link.active {
           color: var(--text-primary);
-          border-left-color: var(--accent);
         }
 
         /* Scrollbar */
@@ -208,7 +245,7 @@ export default function TableOfContents() {
         }
 
         .toc::-webkit-scrollbar-thumb {
-          background: var(--bg-tertiary);
+          background: var(--border-hover);
           border-radius: var(--radius-full);
         }
       `}</style>

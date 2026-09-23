@@ -1,0 +1,282 @@
+---
+const ICONS = {
+  copy: '<path d="M7 9.667a2.667 2.667 0 0 1 2.667 -2.667h8.666a2.667 2.667 0 0 1 2.667 2.667v8.666a2.667 2.667 0 0 1 -2.667 2.667h-8.666a2.667 2.667 0 0 1 -2.667 -2.667z" /><path d="M4.012 16.737a2 2 0 0 1 -1.012 -1.737v-10c0 -1.1 .9 -2 2 -2h10c.75 0 1.158 .385 1.5 1" />',
+  check: '<path d="M5 12l5 5l10 -10" />',
+  markdown: '<path d="M3 7a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v10a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2z" /><path d="M7 15v-6l2 2l2 -2v6" /><path d="M14 13l2 2l2 -2m-2 2v-6" />',
+  link: '<path d="M9 15l6 -6" /><path d="M11 6l.463 -.536a5 5 0 0 1 7.071 7.072l-.534 .464" /><path d="M13 18l-.397 .534a5.068 5.068 0 0 1 -7.127 0a4.972 4.972 0 0 1 0 -7.071l.524 -.463" />',
+  list: '<path d="M9 6l11 0" /><path d="M9 12l11 0" /><path d="M9 18l11 0" /><path d="M5 6l0 .01" /><path d="M5 12l0 .01" /><path d="M5 18l0 .01" />',
+  chat: '<path d="M8 9h8" /><path d="M8 13h6" /><path d="M18 4a3 3 0 0 1 3 3v8a3 3 0 0 1 -3 3h-5l-5 3v-3h-2a3 3 0 0 1 -3 -3v-8a3 3 0 0 1 3 -3h12z" />',
+  chevron: '<path d="M6 9l6 6l6 -6" />',
+};
+
+const ITEMS = [
+  { action: 'markdown', icon: ICONS.markdown, title: 'Copy page as Markdown', description: 'This page, formatted for LLMs and notes' },
+  { action: 'link', icon: ICONS.link, title: 'Copy page link', description: 'The URL of this page' },
+  { action: 'llms', icon: ICONS.list, title: 'Copy llms.txt', description: 'An index of every docs page for AI tools' },
+  { action: 'claude', icon: ICONS.chat, title: 'Open in Claude', description: 'Ask questions about this page' },
+  { action: 'chatgpt', icon: ICONS.chat, title: 'Open in ChatGPT', description: 'Ask questions about this page' },
+];
+---
+
+<div class="page-actions" data-markdown-skip>
+  <button type="button" class="page-actions-main" data-page-action="markdown" title="Copy this page as Markdown">
+    <span class="morph" data-page-actions-icon>
+      <span data-morph="idle" data-active="true"><svg viewBox="0 0 24 24" aria-hidden="true" set:html={ICONS.copy} /></span>
+      <span data-morph="copied" data-active="false" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" set:html={ICONS.check} /></span>
+    </span>
+    <span data-page-actions-text>Copy page</span>
+  </button>
+  <button
+    type="button"
+    class="page-actions-toggle"
+    aria-label="More copy options"
+    aria-haspopup="menu"
+    aria-expanded="false"
+    data-page-actions-toggle
+  >
+    <svg viewBox="0 0 24 24" aria-hidden="true" set:html={ICONS.chevron} />
+  </button>
+
+  <div class="page-actions-menu" role="menu" hidden data-page-actions-menu>
+    {ITEMS.map((item) => (
+      <button type="button" role="menuitem" class="page-actions-item" data-page-action={item.action}>
+        <svg viewBox="0 0 24 24" aria-hidden="true" set:html={item.icon} />
+        <span>
+          <span class="page-actions-item-title">{item.title}</span>
+          <span class="page-actions-item-description">{item.description}</span>
+        </span>
+      </button>
+    ))}
+  </div>
+</div>
+
+<script>
+  import { TextMorph } from 'torph';
+  import { morphTo } from '../morph';
+
+  const root = document.querySelector<HTMLElement>('.page-actions');
+  const icon = root?.querySelector<HTMLElement>('[data-page-actions-icon]');
+  const textElement = root?.querySelector<HTMLElement>('[data-page-actions-text]');
+  const text = textElement && new TextMorph({ element: textElement });
+  let resetTimer: number | undefined;
+
+  function showResult(label: string, iconState: 'copied' | 'idle') {
+    window.clearTimeout(resetTimer);
+    text?.update(label);
+    if (icon) morphTo(icon, iconState);
+    resetTimer = window.setTimeout(() => {
+      text?.update('Copy page');
+      if (icon) morphTo(icon, 'idle');
+    }, 2000);
+  }
+  const toggle = root?.querySelector<HTMLButtonElement>('[data-page-actions-toggle]');
+  const menu = root?.querySelector<HTMLElement>('[data-page-actions-menu]');
+
+  function setOpen(open: boolean) {
+    if (!menu || !toggle) return;
+    menu.hidden = !open;
+    toggle.setAttribute('aria-expanded', String(open));
+    if (open) menu.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
+  }
+
+  async function copy(value: string | Promise<string>, label: string) {
+    try {
+      if (typeof ClipboardItem !== 'undefined') {
+        const blob = Promise.resolve(value).then((text) => new Blob([text], { type: 'text/plain' }));
+        await navigator.clipboard.write([new ClipboardItem({ 'text/plain': blob })]);
+      } else {
+        await navigator.clipboard.writeText(await value);
+      }
+      showResult(label, 'copied');
+    } catch (error) {
+      console.warn('Copy failed', error);
+      showResult('Copy failed', 'idle');
+    }
+  }
+
+  function askPrompt(): string {
+    return `Read ${window.location.href} and help me use the Better Lyrics API. Answer my questions about it.`;
+  }
+
+  const actions: Record<string, () => Promise<void> | void> = {
+    markdown: () => {
+      const article = document.querySelector<HTMLElement>('.article');
+      if (!article) return;
+      const markdown = import('../pageMarkdown').then(({ articleToMarkdown }) => articleToMarkdown(article, window.location.href));
+      return copy(markdown, 'Copied as Markdown');
+    },
+    link: () => copy(window.location.href, 'Link copied'),
+    llms: () => copy(fetch('/llms.txt').then((res) => res.text()), 'llms.txt copied'),
+    claude: () => {
+      window.open(`https://claude.ai/new?q=${encodeURIComponent(askPrompt())}`, '_blank', 'noopener');
+    },
+    chatgpt: () => {
+      window.open(`https://chatgpt.com/?q=${encodeURIComponent(askPrompt())}`, '_blank', 'noopener');
+    },
+  };
+
+  root?.querySelectorAll<HTMLElement>('[data-page-action]').forEach((button) => {
+    button.addEventListener('click', () => {
+      setOpen(false);
+      actions[button.dataset.pageAction ?? '']?.();
+    });
+  });
+
+  toggle?.addEventListener('click', () => setOpen(menu?.hidden ?? false));
+
+  document.addEventListener('click', (e) => {
+    if (root && !root.contains(e.target as Node)) setOpen(false);
+  });
+
+  root?.addEventListener('keydown', (e) => {
+    if (!menu || menu.hidden) return;
+    const items = Array.from(menu.querySelectorAll<HTMLElement>('[role="menuitem"]'));
+    const index = items.indexOf(document.activeElement as HTMLElement);
+    if (e.key === 'Escape') {
+      setOpen(false);
+      toggle?.focus();
+    } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      const step = e.key === 'ArrowDown' ? 1 : -1;
+      items[(index + step + items.length) % items.length]?.focus();
+    }
+  });
+</script>
+
+<style>
+  .page-actions {
+    position: relative;
+    display: inline-flex;
+    flex-shrink: 0;
+    margin-top: 0.25rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background-color: var(--surface-panel);
+  }
+
+  .page-actions svg {
+    width: 0.875rem;
+    height: 0.875rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    flex-shrink: 0;
+  }
+
+  .page-actions-main,
+  .page-actions-toggle {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem var(--space-3);
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: color var(--transition-fast), background-color var(--transition-fast);
+  }
+
+  .page-actions-main {
+    gap: 0.375rem;
+    justify-content: flex-start;
+    border-radius: var(--radius-md) 0 0 var(--radius-md);
+  }
+
+
+
+  .page-actions-toggle svg {
+    transition: transform 200ms cubic-bezier(0.2, 0, 0, 1);
+  }
+
+  .page-actions-toggle[aria-expanded='true'] svg {
+    transform: rotate(180deg);
+  }
+
+  .page-actions-toggle {
+    padding: 0.25rem var(--space-2);
+    border-left: 1px solid var(--border);
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  }
+
+  .page-actions-main:hover,
+  .page-actions-toggle:hover,
+  .page-actions-toggle[aria-expanded='true'] {
+    color: var(--text-primary);
+    background-color: var(--bg-tertiary);
+  }
+
+  .page-actions-menu {
+    position: absolute;
+    top: calc(100% + var(--space-2));
+    right: 0;
+    z-index: 20;
+    width: 17rem;
+    padding: var(--space-1);
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 16px 40px -12px rgba(0, 0, 0, 0.6);
+    transform-origin: top right;
+    animation: page-actions-in 160ms cubic-bezier(0.2, 0, 0, 1);
+  }
+
+  @keyframes page-actions-in {
+    from {
+      opacity: 0;
+      transform: scale(0.96) translateY(-4px);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .page-actions-menu {
+      animation: none;
+    }
+  }
+
+  .page-actions-item {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    width: 100%;
+    padding: var(--space-2);
+    text-align: left;
+    color: var(--text-secondary);
+    background: none;
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+  }
+
+  .page-actions-item svg {
+    margin-top: 0.125rem;
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .page-actions-item:hover,
+  .page-actions-item:focus-visible {
+    color: var(--text-primary);
+    background-color: var(--bg-tertiary);
+    outline: none;
+  }
+
+  .page-actions-item > span {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+
+  .page-actions-item-title {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+
+  .page-actions-item-description {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+</style>

@@ -1,4 +1,5 @@
 ---
+import CodeTabs from '../../components/CodeTabs.astro';
 import DocsLayout from '../../layouts/DocsLayout.astro';
 ---
 
@@ -19,7 +20,7 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
 
   <p>
     The Better Lyrics API uses a <strong>cache-first authentication model</strong>.
-    This means cached responses are always publicly accessible, while fresh fetches may require an API key.
+    Anyone can read a cached response. A fresh fetch may need an API key.
   </p>
 
   <h2>When you need an API key</h2>
@@ -50,22 +51,62 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
       </tr>
     </tbody>
   </table>
-  <p class="note">*Only when <code>API_KEY_REQUIRED</code> is enabled on the server. Keys are currently not being issued to new users.</p>
+  <p class="note">*Only on <code>/getLyrics</code> and <code>/ttml/getLyrics</code>, and only when <code>API_KEY_REQUIRED</code> is enabled on the server. <code>/kugou/getLyrics</code> and <code>/qq/getLyrics</code> never need a key. Keys are currently not being issued to new users.</p>
 
   <h2>Using your API key</h2>
   <p>Pass your API key in the <code>X-API-Key</code> header:</p>
-  <pre><code class="language-bash">curl -H "X-API-Key: your-api-key" \
-  "https://lyrics-api.boidu.dev/getLyrics?s=Song&a=Artist"</code></pre>
+  <CodeTabs tabs={[
+    { language: 'curl', code: `curl -H "X-API-Key: your-api-key" \\
+  "https://api.betterlyrics.org/getLyrics?s=E85&a=Don%20Toliver&al=OCTANE&d=154"` },
+    { language: 'javascript', code: `const res = await fetch("https://api.betterlyrics.org/getLyrics?s=E85&a=Don%20Toliver&al=OCTANE&d=154", {
+  headers: { "X-API-Key": "your-api-key" },
+});
+const data = await res.json();` },
+    { language: 'python', code: `import requests
+
+res = requests.get(
+    "https://api.betterlyrics.org/getLyrics?s=E85&a=Don%20Toliver&al=OCTANE&d=154",
+    headers={"X-API-Key": "your-api-key"},
+)
+data = res.json()` },
+    { language: 'go', code: `package main
+
+import (
+	"fmt"
+	"io"
+	"net/http"
+)
+
+func main() {
+	req, err := http.NewRequest(http.MethodGet, "https://api.betterlyrics.org/getLyrics?s=E85&a=Don%20Toliver&al=OCTANE&d=154", nil)
+	if err != nil {
+		panic(err)
+	}
+	req.Header.Set("X-API-Key", "your-api-key")
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		panic(err)
+	}
+	defer res.Body.Close()
+
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(string(body))
+}` },
+  ]} />
 
   <h2>API key benefits</h2>
   <ul>
-    <li><strong>Cache miss access</strong> - Fetch lyrics for songs not yet in the cache</li>
-    <li><strong>Rate limit bypass</strong> - Skip the normal rate limiting entirely</li>
-    <li><strong>Revalidation</strong> - Force refresh cached lyrics with the <code>/revalidate</code> endpoint</li>
+    <li>Fetch lyrics for songs that are not in the cache yet</li>
+    <li>Skip rate limiting entirely</li>
+    <li>Force a refresh of cached lyrics with the <code>/revalidate</code> endpoint</li>
   </ul>
 
   <h2>Response headers</h2>
-  <p>The API includes authentication-related headers in every response:</p>
+  <p>The API reports authentication state in these headers:</p>
   <table>
     <thead>
       <tr>
@@ -76,11 +117,15 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
     <tbody>
       <tr>
         <td><code>X-Auth-Mode</code></td>
-        <td>Current auth mode: <code>authenticated</code> (valid API key), <code>invalid</code> (invalid API key provided), or <code>cache</code> (API key required for fresh requests)</td>
+        <td>
+          Current auth mode: <code>authenticated</code> (valid API key), <code>invalid</code> (invalid API key provided), or
+          <code>cache</code> (no API key, so only cached lyrics are served). Sent only on JSON responses from <code>/getLyrics</code>,
+          <code>/ttml/getLyrics</code> and <code>/revalidate</code>, and only when the server enforces API keys.
+        </td>
       </tr>
       <tr>
         <td><code>X-RateLimit-Bypass</code></td>
-        <td>Set to <code>true</code> when rate limits are bypassed via API key</td>
+        <td>Set to <code>true</code> on every response when rate limits are bypassed via API key</td>
       </tr>
     </tbody>
   </table>
@@ -103,15 +148,17 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
 
   <h2 id="loading-uncached-songs">Loading uncached songs</h2>
   <p>
-    If a song you need isn't cached, you can prime the cache by playing it once
-    through the <a href="https://better-lyrics.boidu.dev" target="_blank" rel="noopener noreferrer">Better Lyrics</a>
-    extension in YouTube Music. The extension fetches lyrics through the same
-    upstream the API uses, so after one playback the response is cached and
-    available to any caller, no key required.
+    First check that your request sends all four parameters: the cache key includes album and duration,
+    so a request without them often misses an entry that is already cached. If a song you need still isn't
+    cached, play it once with the
+    <a href="https://better-lyrics.boidu.dev" target="_blank" rel="noopener noreferrer">Better Lyrics</a>
+    extension installed. The extension fetches lyrics through the same upstream
+    the API uses, so after that one playback the response is cached and any
+    caller can get it without a key.
   </p>
   <p>
     This only works if the song exists upstream. If the extension can't find it
-    either, no amount of replaying will surface it.
+    either, playing it again won't help.
   </p>
   <p>
     If you have the lyrics yourself, you can upload them directly at
@@ -120,7 +167,7 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
 
   <h2>Cache-first model explained</h2>
   <p>
-    The cache-first model balances accessibility with resource protection:
+    Each request goes through these steps:
   </p>
   <ol>
     <li>Request comes in for lyrics</li>
@@ -131,51 +178,7 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
     <li>Without API key: return 401 error</li>
   </ol>
   <p>
-    This means popular songs that are already cached can be accessed by anyone,
-    while fresh fetches (which consume upstream resources) require authentication.
+    So anyone can read a song that is already cached. Only fresh fetches, which
+    cost an upstream request, need a key.
   </p>
 </DocsLayout>
-
-<style>
-  .note {
-    font-size: 0.875rem;
-    color: var(--text-muted);
-    font-style: italic;
-  }
-  .callout {
-    display: flex;
-    align-items: flex-start;
-    gap: var(--space-3);
-    border: 1px solid var(--accent-border);
-    background: var(--accent-subtle);
-    padding: var(--space-4) var(--space-5);
-    border-radius: var(--radius-lg);
-    margin: 0 0 var(--space-6);
-    font-size: 0.95rem;
-    line-height: 1.6;
-    color: var(--text-secondary);
-  }
-  .callout-icon {
-    flex: 0 0 auto;
-    width: 1.125rem;
-    height: 1.125rem;
-    margin-top: 0.2rem;
-    color: var(--accent);
-  }
-  .callout-body {
-    flex: 1 1 auto;
-    min-width: 0;
-  }
-  .callout strong {
-    color: var(--text-primary);
-    font-weight: 600;
-  }
-  .callout a {
-    color: var(--text-primary);
-    text-decoration: underline;
-    text-underline-offset: 2px;
-  }
-  .callout a:hover {
-    color: var(--accent-hover);
-  }
-</style>

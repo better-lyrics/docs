@@ -1,8 +1,8 @@
 # Better Lyrics Docs
 
-Documentation for the Better Lyrics API - free syllable-synced lyrics for any song.
+Documentation for the Better Lyrics API: free syllable-synced lyrics for any song.
 
-<https://lyrics-api-docs.boidu.dev>
+<https://docs.betterlyrics.org>
 
 ## Development
 
@@ -20,7 +20,7 @@ npm run build
 npm run preview
 ```
 
-## Project Structure
+## Project structure
 
 ```
 ├── src/
@@ -33,13 +33,13 @@ npm run preview
 └── package.json
 ```
 
-## Tech Stack
+## Tech stack
 
-- [Astro](https://astro.build/) - Static site generator
-- [React](https://react.dev/) - Interactive components
-- Cloudflare Pages - Hosting
+- [Astro](https://astro.build/): static site generator
+- [React](https://react.dev/): interactive components
+- Cloudflare Pages: hosting
 
 ## Related
 
-- [Better Lyrics](https://better-lyrics.boidu.dev) - Browser extension for synchronized lyrics
-- [Better Lyrics API](https://lyrics-api.boidu.dev) - The API this documentation covers
+- [Better Lyrics](https://better-lyrics.boidu.dev): browser extension for synced lyrics
+- [Better Lyrics API](https://api.betterlyrics.org): the API this documentation covers

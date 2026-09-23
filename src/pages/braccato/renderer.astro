@@ -1,0 +1,287 @@
+---
+import DocsLayout from '../../layouts/DocsLayout.astro';
+---
+
+<DocsLayout title="Renderer">
+  <p>
+    <code>@braccato/core</code> is a custom element, <code>&lt;braccato-lyrics&gt;</code>, that renders
+    synced lyrics, highlights each syllable as it is sung, and scrolls to follow the song. It has no
+    runtime dependencies. This page covers what most integrations need. The
+    <a href="https://github.com/better-lyrics/braccato/tree/master/packages/core#readme" target="_blank" rel="noopener noreferrer">package README</a>
+    has the full reference.
+  </p>
+
+  <h2>Install</h2>
+  <pre><code class="language-bash">{`npm i @braccato/core`}</code></pre>
+
+  <h2>Imports</h2>
+  <p>
+    Importing <code>@braccato/core/element</code> registers the element. The package does not load its
+    own CSS, so import the three stylesheets too. Load <code>variables.css</code> first, because the
+    other two read from it.
+  </p>
+  <pre><code class="language-javascript">{`import "@braccato/core/element";
+import "@braccato/core/styles/variables.css";
+import "@braccato/core/styles/lyrics.css";
+import "@braccato/core/styles/instrumental.css";`}</code></pre>
+  <p>
+    Without the stylesheets, the lines are in the document but unstyled. The element renders into
+    light DOM, not a shadow root, so your page CSS reaches the lines.
+  </p>
+
+  <h2>Required CSS</h2>
+  <p>The element has no <code>display</code> of its own. Set it:</p>
+  <pre><code class="language-css">{`braccato-lyrics {
+  display: block;
+}`}</code></pre>
+  <p>
+    The renderer measures the space the first line needs to reach the scroll position, but
+    <code>lyrics.css</code> only applies the bottom half. Add the top:
+  </p>
+  <pre><code class="language-css">{`.blyrics-container {
+  padding-top: var(--blyrics-padding-top, 2rem);
+}`}</code></pre>
+
+  <h2>Scrolling</h2>
+  <p>
+    Autoscroll writes <code>scrollTop</code> on the nearest scrollable ancestor, starting at the
+    element itself. An ancestor counts when its <code>overflow-y</code> is <code>auto</code> or
+    <code>scroll</code>. If nothing scrolls, the renderer scrolls the whole page.
+  </p>
+  <p>To make the element its own scroller, give it a height:</p>
+  <pre><code class="language-css">{`braccato-lyrics {
+  display: block;
+  height: 60vh;
+  overflow-y: auto;
+}`}</code></pre>
+  <p>
+    To scroll a different container, name it with <code>host</code>. Writing <code>host</code> rebuilds
+    the view, so set it once during setup.
+  </p>
+  <pre><code class="language-javascript">{`view.host = { getScrollElement: () => frame };`}</code></pre>
+
+  <h3>Pausing autoscroll when the user scrolls</h3>
+  <p>
+    The element does not listen for scroll events. Tell the renderer when the user scrolls, or
+    autoscroll pulls the view back on the next frame and <code>braccato:scroll-state</code> never fires:
+  </p>
+  <pre><code class="language-javascript">{`view.addEventListener("scroll", () => view.renderer?.noteUserScroll(), { passive: true });`}</code></pre>
+  <p>Listen on whichever element actually scrolls.</p>
+
+  <h2>Driving playback</h2>
+
+  <h3>From a media element</h3>
+  <p>
+    Set <code>source</code> to a CSS selector or to an <code>HTMLMediaElement</code>. A selector is
+    resolved when the element connects, so the media element must already be in the document, or you
+    set the property from script. While a source is bound, the element reads the time, paused state and
+    playback rate on its own, and a line click seeks the media element. Writes to
+    <code>currentTime</code> and <code>playing</code> are ignored in this mode.
+  </p>
+  <pre><code class="language-javascript">{`view.source = document.querySelector("audio");`}</code></pre>
+
+  <h3>From your own clock</h3>
+  <p>
+    Without a source, write <code>currentTime</code> (in <strong>seconds</strong>) and
+    <code>playing</code> on every animation frame. If the song plays at a rate other than 1, pass it as
+    <code>tickOptions.playbackRate</code>.
+  </p>
+  <pre><code class="language-javascript">{`function tick() {
+  view.currentTime = player.currentTimeSeconds;
+  view.playing = !player.paused;
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);`}</code></pre>
+
+  <h2>Properties</h2>
+  <p>You can write every property before the element is in the document.</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Property</th>
+        <th>Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>lyrics</code></td>
+        <td><code>Lyric[] | null</code></td>
+        <td>The lines to render, usually from <a href="/braccato/parsers"><code>@braccato/parsers</code></a>. An empty array clears the view</td>
+      </tr>
+      <tr>
+        <td><code>lyricsOptions</code></td>
+        <td>object</td>
+        <td>Build options: <code>loaderVisible</code>, <code>noLyrics</code>, <code>language</code> (a BCP 47 tag for the source lyrics)</td>
+      </tr>
+      <tr>
+        <td><code>source</code></td>
+        <td><code>string | HTMLMediaElement | null</code></td>
+        <td>The media element to follow, or a selector for it</td>
+      </tr>
+      <tr>
+        <td><code>currentTime</code></td>
+        <td><code>number</code></td>
+        <td>Playback position in seconds</td>
+      </tr>
+      <tr>
+        <td><code>playing</code></td>
+        <td><code>boolean</code></td>
+        <td>Whether the song is playing. A paused view animates differently</td>
+      </tr>
+      <tr>
+        <td><code>tickOptions</code></td>
+        <td>object</td>
+        <td>Clock offsets, passive scrolling, sample time and <code>playbackRate</code></td>
+      </tr>
+      <tr>
+        <td><code>theme</code></td>
+        <td><code>string</code></td>
+        <td>A CSS stylesheet. See <a href="#theming">Theming</a></td>
+      </tr>
+      <tr>
+        <td><code>host</code></td>
+        <td>object</td>
+        <td>Overrides for what the renderer asks of the page, such as <code>getScrollElement</code></td>
+      </tr>
+      <tr>
+        <td><code>renderer</code></td>
+        <td>read-only</td>
+        <td>The renderer underneath, for methods like <code>noteUserScroll()</code></td>
+      </tr>
+      <tr>
+        <td><code>status</code></td>
+        <td>read-only</td>
+        <td><code>idle</code>, <code>rendering</code>, <code>theme-conflict</code> or <code>no-browsing-context</code></td>
+      </tr>
+    </tbody>
+  </table>
+  <p>
+    The <code>source</code>, <code>theme</code>, <code>current-time</code> and <code>playing</code>
+    attributes set the matching properties. Properties never write back to attributes.
+  </p>
+
+  <h2>Events</h2>
+  <p>All events bubble and are composed.</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Event</th>
+        <th>Detail</th>
+        <th>When</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>braccato:lyrics-loaded</code></td>
+        <td>{`{ lineCount, syncType }`}</td>
+        <td>Lyrics were applied, including an empty array</td>
+      </tr>
+      <tr>
+        <td><code>braccato:line-click</code></td>
+        <td>{`{ timeS }`}</td>
+        <td>A line was clicked. With a bound source, the seek has already happened</td>
+      </tr>
+      <tr>
+        <td><code>braccato:scroll-state</code></td>
+        <td>{`{ userScrolling }`}</td>
+        <td>Autoscroll stopped following the song, or started again</td>
+      </tr>
+      <tr>
+        <td><code>braccato:error</code></td>
+        <td>{`{ phase, error }`}</td>
+        <td>Something failed while connecting, resolving the source, or applying lyrics or a theme</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>
+    Errors are dispatched one microtask after they happen, so a listener added in the same task that
+    inserts the element still receives them. If you attach listeners later, read <code>status</code>
+    instead.
+  </p>
+
+  <h2>Theming</h2>
+  <p>
+    A theme is a CSS string written to <code>theme</code>. Settings that change behavior go in
+    comments with a <code>blyrics-</code> prefix. Everything else is ordinary CSS.
+  </p>
+  <pre><code class="language-javascript">{`view.theme = \`
+  /* blyrics-target-scroll-pos-ratio = 0.5; */
+  /* blyrics-long-word-threshold = 900; */
+
+  .blyrics-container {
+    --blyrics-font-size: 3rem;
+    --blyrics-lyric-active-color: white;
+    --blyrics-lyric-inactive-color: rgb(255 255 255 / 0.3);
+  }
+\`;`}</code></pre>
+  <p>
+    <code>variables.css</code> declares every <code>--blyrics-*</code> custom property. The class names
+    (<code>blyrics-container</code>, <code>blyrics--line</code>, <code>blyrics--active</code>,
+    <code>blyrics--word</code> and others) are public API. Import them from
+    <code>@braccato/core/constants</code> instead of typing them. Each word also carries
+    <code>data-word-state</code> (<code>upcoming</code>, <code>active</code> or <code>past</code>).
+  </p>
+  <p>
+    If you write themes in RICS, compile them to CSS with <code>@braccato/rics</code> first.
+  </p>
+
+  <h2>React example</h2>
+  <p>
+    The element is a normal custom element, so in React you set its properties through a ref. This
+    example drives the clock from the player and seeks on line click.
+  </p>
+  <pre><code class="language-javascript">{`import "@braccato/core/element";
+import "@braccato/core/styles/variables.css";
+import "@braccato/core/styles/lyrics.css";
+import "@braccato/core/styles/instrumental.css";
+import { useEffect, useRef } from "react";
+
+export function Lyrics({ lyrics, getCurrentTime, getPlaying, onSeek }) {
+  const ref = useRef(null);
+
+  useEffect(() => {
+    ref.current.lyrics = lyrics;
+  }, [lyrics]);
+
+  useEffect(() => {
+    let frame;
+    const tick = () => {
+      ref.current.currentTime = getCurrentTime();
+      ref.current.playing = getPlaying();
+      frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [getCurrentTime, getPlaying]);
+
+  useEffect(() => {
+    const el = ref.current;
+    const seek = (event) => onSeek(event.detail.timeS);
+    const noteUserScroll = () => el.renderer?.noteUserScroll();
+    el.addEventListener("braccato:line-click", seek);
+    el.addEventListener("scroll", noteUserScroll, { passive: true });
+    return () => {
+      el.removeEventListener("braccato:line-click", seek);
+      el.removeEventListener("scroll", noteUserScroll);
+    };
+  }, [onSeek]);
+
+  return <braccato-lyrics ref={ref} style={{ display: "block", height: 600, overflowY: "auto" }} />;
+}`}</code></pre>
+
+  <h2>Limits</h2>
+  <ul>
+    <li>
+      One renderer per document. The theme and scroll padding are written per document, so two
+      elements given different themes both report <code>theme-conflict</code>. Both keep rendering.
+    </li>
+    <li>
+      Load one copy of the package per page. The first copy to load registers the element names.
+    </li>
+    <li>
+      A browser extension's isolated world has no custom element registry. Use the element from the
+      page's world, or call <code>createLyricsRenderer</code> from <code>@braccato/core</code> directly.
+    </li>
+  </ul>
+</DocsLayout>

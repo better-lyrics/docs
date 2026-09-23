@@ -1,4 +1,5 @@
 ---
+import CodeTabs from '../../components/CodeTabs.astro';
 import DocsLayout from '../../layouts/DocsLayout.astro';
 ---
 
@@ -9,8 +10,9 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
   </p>
 
   <p>
-    Force refresh cached lyrics for a song. Requires a valid API key.
-    Use this to update stale cache entries or retry after negative cache.
+    Refetch lyrics for a song that is already cached, and replace the cache entry when the content changed.
+    This works for both found lyrics and cached "no lyrics" results. Requires a valid API key.
+    It refreshes only the default TTML entry that <code>/getLyrics</code> serves.
   </p>
 
   <h2>Parameters</h2>
@@ -39,14 +41,14 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
       <tr>
         <td><code>al</code>, <code>album</code>, <code>albumName</code></td>
         <td>string</td>
-        <td>No</td>
+        <td>Always send</td>
         <td>Album name</td>
       </tr>
       <tr>
         <td><code>d</code>, <code>duration</code></td>
-        <td>number</td>
-        <td>No</td>
-        <td>Track duration in seconds</td>
+        <td>string of digits</td>
+        <td>Always send</td>
+        <td>Track duration in whole seconds</td>
       </tr>
     </tbody>
   </table>
@@ -64,21 +66,71 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
       <tr>
         <td><code>X-API-Key</code></td>
         <td>Yes</td>
-        <td>Valid API key for authentication</td>
+        <td>Valid API key. The endpoint works only when the server enforces API keys.</td>
       </tr>
     </tbody>
   </table>
 
   <h2>Example request</h2>
-  <pre><code class="language-bash">curl -H "X-API-Key: your-api-key" \
-  "https://lyrics-api.boidu.dev/revalidate?s=Shape%20of%20You&a=Ed%20Sheeran"</code></pre>
+  <CodeTabs tabs={[
+    { language: 'curl', code: `curl -H "X-API-Key: your-api-key" \\
+  "https://api.betterlyrics.org/revalidate?s=E85&a=Don%20Toliver&al=OCTANE&d=154"` },
+    { language: 'javascript', code: `const res = await fetch("https://api.betterlyrics.org/revalidate?s=E85&a=Don%20Toliver&al=OCTANE&d=154", {
+  headers: { "X-API-Key": "your-api-key" },
+});
+const data = await res.json();` },
+    { language: 'python', code: `import requests
+
+res = requests.get(
+    "https://api.betterlyrics.org/revalidate?s=E85&a=Don%20Toliver&al=OCTANE&d=154",
+    headers={"X-API-Key": "your-api-key"},
+)
+data = res.json()` },
+    { language: 'go', code: `package main
+
+import (
+	"fmt"
+	"io"
+	"net/http"
+)
+
+func main() {
+	req, err := http.NewRequest(http.MethodGet, "https://api.betterlyrics.org/revalidate?s=E85&a=Don%20Toliver&al=OCTANE&d=154", nil)
+	if err != nil {
+		panic(err)
+	}
+	req.Header.Set("X-API-Key", "your-api-key")
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		panic(err)
+	}
+	defer res.Body.Close()
+
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(string(body))
+}` },
+  ]} />
 
   <h2>Success response</h2>
   <p>Status: <code>200 OK</code></p>
   <pre><code class="language-json">{`{
   "updated": true,
-  "cacheKey": "ttml_lyrics:shape of you ed sheeran",
+  "cacheKey": "ttml_lyrics:e85 don toliver octane 154s",
   "wasNegativeCache": false
+}`}</code></pre>
+
+  <p>
+    When the upstream fetch fails or finds no lyrics, the status is still <code>200 OK</code>.
+    The cache entry is not changed:
+  </p>
+  <pre><code class="language-json">{`{
+  "error": "no lyrics found from source",
+  "updated": false,
+  "cacheKey": "ttml_lyrics:e85 don toliver octane 154s"
 }`}</code></pre>
 
   <h2>Response fields</h2>
@@ -104,27 +156,33 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
       <tr>
         <td><code>wasNegativeCache</code></td>
         <td>boolean</td>
-        <td>Whether the previous entry was a negative cache (no lyrics found)</td>
+        <td>Whether the previous entry was a negative cache (no lyrics found). Not sent when <code>error</code> is set.</td>
+      </tr>
+      <tr>
+        <td><code>error</code></td>
+        <td>string</td>
+        <td>Why the upstream fetch failed. Only when <code>updated</code> is <code>false</code> because of a failure.</td>
       </tr>
     </tbody>
   </table>
 
   <h2>When to use</h2>
   <ul>
-    <li><strong>Negative cache override</strong> - When you know lyrics now exist for a previously unavailable song</li>
-    <li><strong>Content correction</strong> - When lyrics have been corrected at the source</li>
-    <li><strong>Cache verification</strong> - To ensure you have the latest version</li>
+    <li>You know lyrics now exist for a song that had none before</li>
+    <li>The lyrics were corrected at the source</li>
+    <li>You want to make sure you have the latest version</li>
   </ul>
 
   <h2>Error responses</h2>
 
-  <h3>Missing API key (401)</h3>
+  <h3>Missing or invalid API key (401)</h3>
   <pre><code class="language-json">{`{
   "error": "API key required for revalidation",
   "message": "Provide a valid API key via X-API-Key header"
 }`}</code></pre>
 
   <h3>Missing parameters (400)</h3>
+  <p>Both song and artist are required.</p>
   <pre><code class="language-json">{`{
   "error": "song (s) and artist (a) parameters are required"
 }`}</code></pre>
@@ -137,33 +195,11 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
 
   <h2>Notes</h2>
   <ul>
-    <li>Revalidation fetches fresh data regardless of cache state</li>
-    <li>If lyrics are found, they replace both positive and negative cache entries</li>
-    <li>The <code>updated</code> field is <code>false</code> if content hasn't changed</li>
-    <li>This endpoint always counts against rate limits unless bypassed via API key</li>
+    <li>Only songs that are already cached can be revalidated. Other queries return <code>404</code>.</li>
+    <li>The lookup uses the exact cache key for the query, with no duration tolerance. The key includes album and duration, so send the same four values you send to <code>/getLyrics</code>. Without them, the lookup usually returns <code>404</code>.</li>
+    <li>Only the default TTML entry is refreshed. Entries for <code>/ttml/getLyrics</code>, <code>/kugou/getLyrics</code> and <code>/qq/getLyrics</code> are not changed.</li>
+    <li>When the fetched lyrics replace a negative cache entry, the negative entry is removed</li>
+    <li>The <code>updated</code> field is <code>false</code> if the content has not changed</li>
+    <li>A valid API key is always required, so this endpoint is never rate limited (<code>X-RateLimit-Type: bypass</code>)</li>
   </ul>
 </DocsLayout>
-
-<style>
-  .endpoint-badge {
-    display: flex;
-    align-items: center;
-    gap: var(--space-3);
-    margin-bottom: var(--space-6);
-  }
-
-  .method {
-    background-color: rgba(34, 197, 94, 0.1);
-    color: var(--success);
-    font-size: 0.75rem;
-    font-weight: 700;
-    padding: var(--space-1) var(--space-2);
-    border-radius: var(--radius-sm);
-  }
-
-  .endpoint-badge code {
-    font-size: 1.125rem;
-    background: none;
-    padding: 0;
-  }
-</style>

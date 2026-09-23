@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useCallback } from "react";
+import { TextMorph } from "torph/react";
 
 interface ParsedWord {
   begin: number;
@@ -27,25 +28,19 @@ interface TimelineProps {
 }
 
 const SPEAKER_COLORS: Record<string, string> = {
-  v1: "#f20c32", // red (primary)
-  v2: "#3b82f6", // blue
-  v3: "#10b981", // emerald
-  v4: "#f59e0b", // amber
-  v5: "#8b5cf6", // violet
-  v6: "#ec4899", // pink
-  v7: "#06b6d4", // cyan
-  v8: "#84cc16", // lime
-  v9: "#f97316", // orange
-  v10: "#6366f1", // indigo
-  v11: "#14b8a6", // teal
-  v12: "#a855f7", // purple
-  v13: "#eab308", // yellow
-  v14: "#0ea5e9", // sky
-  v15: "#22c55e", // green
-  v1000: "#d946ef", // fuchsia (multiple speakers together)
+  v1: "oklch(0.86 0.01 280)",
+  v2: "oklch(0.74 0.11 250)",
+  v3: "oklch(0.76 0.11 160)",
+  v4: "oklch(0.8 0.1 80)",
+  v5: "oklch(0.72 0.12 300)",
+  v6: "oklch(0.74 0.11 350)",
+  v7: "oklch(0.78 0.09 200)",
+  v8: "oklch(0.8 0.1 125)",
+  v1000: "oklch(0.74 0.1 320)",
+  v2000: "oklch(0.8 0.07 65)",
 };
 
-const DEFAULT_SPEAKER_COLOR = "#71717a"; // zinc-500
+const DEFAULT_SPEAKER_COLOR = "oklch(0.65 0.02 280)";
 
 function getSpeakerColor(agent?: string): string {
   if (!agent) return SPEAKER_COLORS.v1;
@@ -190,7 +185,6 @@ function parseTTML(ttml: string): ParsedLine[] {
 }
 
 export default function Timeline({ ttml }: TimelineProps) {
-  const [expanded, setExpanded] = useState(true);
   const [scrubPosition, setScrubPosition] = useState<number | null>(null);
   const [selectedLine, setSelectedLine] = useState<number | null>(null);
   const [zoom, setZoom] = useState(1);
@@ -203,6 +197,13 @@ export default function Timeline({ ttml }: TimelineProps) {
   const lineRefs = useRef<Map<number, HTMLDivElement>>(new Map());
 
   const lines = useMemo(() => parseTTML(ttml), [ttml]);
+  const agents = useMemo(
+    () =>
+      [...new Set(lines.flatMap((line) => (line.agent ? [line.agent] : [])))].sort(
+        (a, b) => Number(a.replace(/\D/g, '')) - Number(b.replace(/\D/g, '')),
+      ),
+    [lines],
+  );
 
   const totalDuration = useMemo(() => {
     if (lines.length === 0) return 0;
@@ -419,51 +420,30 @@ export default function Timeline({ ttml }: TimelineProps) {
   }
 
   return (
-    <div className="timeline-container">
-      <div className={`timeline-header ${!expanded ? "collapsed" : ""}`}>
-        <span className="timeline-title">Timeline</span>
-        <div className="timeline-controls">
-          {expanded && zoom > 1 && (
-            <span className="zoom-indicator">{zoom.toFixed(1)}x</span>
-          )}
-          {expanded && (
-            <div className="zoom-buttons">
-              <button
-                className="zoom-btn"
-                onClick={handleZoomOut}
-                disabled={zoom <= 1}
-                title="Zoom out"
-              >
-                −
-              </button>
-              <button
-                className="zoom-btn"
-                onClick={handleResetZoom}
-                disabled={zoom === 1}
-                title="Reset zoom"
-              >
-                ⟲
-              </button>
-              <button
-                className="zoom-btn"
-                onClick={handleZoomIn}
-                disabled={zoom >= 20}
-                title="Zoom in"
-              >
-                +
-              </button>
-            </div>
-          )}
-          <button
-            className="collapse-btn"
-            onClick={() => setExpanded(!expanded)}
-          >
-            {expanded ? "Collapse" : "Expand"}
+    <div className="timeline">
+      <div className="timeline-toolbar">
+        <div className="timeline-legend">
+          {agents.map((agent) => (
+            <span key={agent} className="speaker-pill" style={{ '--speaker-color': getSpeakerColor(agent) } as React.CSSProperties}>
+              {agent}
+            </span>
+          ))}
+        </div>
+        <div className="zoom-controls">
+          <TextMorph className="zoom-hint">{zoom > 1 ? 'Scroll to zoom, drag to pan' : 'Scroll to zoom'}</TextMorph>
+          <TextMorph className="zoom-indicator">{`${zoom.toFixed(1)}x`}</TextMorph>
+          <button className="zoom-btn" onClick={handleZoomOut} disabled={zoom <= 1} aria-label="Zoom out">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14" /></svg>
+          </button>
+          <button className="zoom-btn" onClick={handleResetZoom} disabled={zoom === 1} aria-label="Reset zoom">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4" /><path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4" /></svg>
+          </button>
+          <button className="zoom-btn" onClick={handleZoomIn} disabled={zoom >= 20} aria-label="Zoom in">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14" /><path d="M5 12h14" /></svg>
           </button>
         </div>
       </div>
 
-      {expanded && (
         <div className="timeline-content">
           <div
             className={`timeline-track ${zoom > 1 ? "zoomable" : ""} ${
@@ -537,9 +517,6 @@ export default function Timeline({ ttml }: TimelineProps) {
               />
             )}
 
-            {zoom > 1 && (
-              <div className="zoom-hint">Scroll to zoom • Drag to pan</div>
-            )}
           </div>
 
           <div className="lines-list">
@@ -562,16 +539,9 @@ export default function Timeline({ ttml }: TimelineProps) {
                   onClick={() => handleLineClick(index, line, false)}
                 >
                   <div className="line-timing">
-                    <span className="timing-badge">
-                      {formatTime(line.begin)} - {formatTime(line.end)}
-                    </span>
+                    <span className="line-time">{formatTime(line.begin)}</span>
                     {line.agent && (
-                      <span
-                        className="speaker-badge"
-                        style={{ backgroundColor: speakerColor }}
-                      >
-                        {line.agent.toUpperCase()}
-                      </span>
+                      <span className="speaker-pill">{line.agent}</span>
                     )}
                   </div>
                   <div className="line-text">
@@ -645,107 +615,103 @@ export default function Timeline({ ttml }: TimelineProps) {
             })}
           </div>
         </div>
-      )}
 
       <style>{`
-        .timeline-container {
-          background-color: var(--bg-secondary);
-          border: 1px solid var(--border);
-          border-radius: var(--radius-xl);
-          overflow: hidden;
-          margin-top: var(--space-6);
+        .timeline {
+          display: flex;
+          flex-direction: column;
         }
 
-        .timeline-header {
+        .timeline-toolbar {
           display: flex;
+          flex-wrap: wrap;
+          align-items: center;
           justify-content: space-between;
+          gap: var(--space-3);
+          padding: var(--space-3) var(--space-4);
+        }
+
+        .timeline-legend {
+          display: flex;
+          flex-wrap: wrap;
+          gap: var(--space-2);
+        }
+
+        .speaker-pill {
+          display: inline-flex;
           align-items: center;
-          padding: var(--space-4);
-          border-bottom: 1px solid var(--border);
-          background-color: var(--bg-tertiary);
+          align-self: flex-start;
+          padding: 0.0625rem 0.4375rem;
+          font-family: var(--font-mono);
+          font-size: 0.625rem;
+          font-weight: 500;
+          line-height: 1.4;
+          color: var(--speaker-color);
+          background-color: color-mix(in srgb, var(--speaker-color) 14%, transparent);
+          border: 1px solid color-mix(in srgb, var(--speaker-color) 28%, transparent);
+          border-radius: var(--radius-full);
         }
 
-        .timeline-header.collapsed {
-          border-bottom: none;
-        }
-
-        .timeline-title {
-          font-weight: 600;
-          color: var(--text-primary);
-        }
-
-        .timeline-controls {
+        .zoom-controls {
           display: flex;
           align-items: center;
-          gap: var(--space-3);
+          gap: 2px;
         }
 
         .zoom-indicator {
-          font-size: 0.75rem;
-          font-weight: 500;
-          color: var(--text-muted);
+          margin-right: var(--space-2);
           font-family: var(--font-mono);
-        }
-
-        .zoom-buttons {
-          display: flex;
-          gap: var(--space-1);
+          font-size: 0.6875rem;
+          color: var(--text-muted);
         }
 
         .zoom-btn {
-          width: 28px;
-          height: 28px;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 1rem;
-          font-weight: 500;
-          background: transparent;
-          border: 1px solid var(--border);
-          border-radius: var(--radius-sm);
-          color: var(--text-muted);
+          width: 1.75rem;
+          height: 1.75rem;
+          padding: 0;
+          background: none;
+          border: none;
+          border-radius: var(--radius-md);
+          color: var(--text-secondary);
           cursor: pointer;
-          transition: all var(--transition-fast);
+          transition: color var(--transition-fast), background-color var(--transition-fast), opacity var(--transition-fast);
+        }
+
+        .zoom-btn svg {
+          width: 0.875rem;
+          height: 0.875rem;
+          fill: none;
+          stroke: currentColor;
+          stroke-width: 1.5;
+          stroke-linecap: round;
+          stroke-linejoin: round;
         }
 
         .zoom-btn:hover:not(:disabled) {
-          border-color: var(--border-hover);
-          color: var(--text-secondary);
+          color: var(--text-primary);
+          background-color: var(--bg-tertiary);
         }
 
         .zoom-btn:disabled {
           opacity: 0.3;
-          cursor: not-allowed;
-        }
-
-        .collapse-btn {
-          padding: var(--space-1) var(--space-3);
-          font-size: 0.75rem;
-          font-weight: 500;
-          background: transparent;
-          border: 1px solid var(--border);
-          border-radius: var(--radius-sm);
-          color: var(--text-muted);
-          cursor: pointer;
-          transition: all var(--transition-fast);
-        }
-
-        .collapse-btn:hover {
-          border-color: var(--border-hover);
-          color: var(--text-secondary);
+          cursor: default;
         }
 
         .timeline-content {
-          padding: var(--space-4);
+          padding: 0 var(--space-4) var(--space-4);
         }
 
         .timeline-track {
           position: relative;
-          height: 80px;
-          background-color: var(--bg-primary);
-          border-radius: var(--radius-md);
+          height: 72px;
+          background-color: var(--surface-panel);
+          border: 1px solid var(--border-subtle);
+          border-radius: var(--radius-lg);
           cursor: crosshair;
-          margin-bottom: var(--space-4);
+          margin-bottom: var(--space-3);
           overflow: hidden;
           user-select: none;
         }
@@ -759,30 +725,22 @@ export default function Timeline({ ttml }: TimelineProps) {
         }
 
         .zoom-hint {
-          position: absolute;
-          bottom: 4px;
-          right: 8px;
-          font-size: 0.625rem;
+          margin-right: var(--space-3);
+          font-size: 0.6875rem;
           color: var(--text-muted);
-          opacity: 0.6;
-          pointer-events: none;
         }
 
         .time-markers {
           position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          height: 20px;
-          border-bottom: 1px solid var(--border);
+          inset: 0;
           pointer-events: none;
         }
 
         .time-marker {
           position: absolute;
           top: 0;
-          height: 100%;
-          border-left: 1px solid var(--border);
+          bottom: 0;
+          border-left: 1px solid var(--border-subtle);
         }
 
         .time-marker:first-child {
@@ -791,13 +749,13 @@ export default function Timeline({ ttml }: TimelineProps) {
 
         .marker-label {
           position: absolute;
-          top: 2px;
-          left: 4px;
+          top: 4px;
+          left: 6px;
+          font-family: var(--font-mono);
           font-size: 0.625rem;
           color: var(--text-muted);
           white-space: nowrap;
           user-select: none;
-          pointer-events: none;
         }
 
         .timeline-bars {
@@ -805,121 +763,99 @@ export default function Timeline({ ttml }: TimelineProps) {
           top: 24px;
           left: 0;
           right: 0;
-          bottom: 4px;
+          bottom: 8px;
         }
 
         .timeline-bar {
           position: absolute;
           top: 50%;
           transform: translateY(-50%);
-          height: 24px;
-          background-color: color-mix(in srgb, var(--speaker-color) 10%, transparent);
-          border: 1px solid color-mix(in srgb, var(--speaker-color) 50%, transparent);
-          border-radius: 2px;
+          height: 20px;
+          background-color: color-mix(in srgb, var(--speaker-color) 35%, transparent);
+          border-radius: 3px;
           cursor: pointer;
           min-width: 2px;
         }
 
         .timeline-bar.background-vocals {
-          height: 12px;
+          height: 8px;
+          background-color: color-mix(in srgb, var(--speaker-color) 25%, transparent);
         }
 
         .timeline-bar:hover {
-          background-color: color-mix(in srgb, var(--speaker-color) 30%, transparent);
-          border-color: var(--speaker-color);
+          background-color: color-mix(in srgb, var(--speaker-color) 65%, transparent);
           z-index: 1;
         }
 
         .timeline-track:not(.dragging) .timeline-bar {
-          transition: background-color var(--transition-fast), border-color var(--transition-fast);
+          transition: background-color var(--transition-fast);
         }
 
         .timeline-bar.selected {
           background-color: var(--speaker-color);
-          border-color: var(--speaker-color);
         }
 
         .scrubber {
           position: absolute;
-          top: 20px;
+          top: 0;
           bottom: 0;
-          width: 2px;
+          width: 1px;
           background-color: var(--text-primary);
           pointer-events: none;
         }
 
-        .scrubber::before {
-          content: '';
-          position: absolute;
-          top: -2px;
-          left: -4px;
-          width: 10px;
-          height: 10px;
-          background-color: var(--text-primary);
-          border-radius: 50%;
-        }
-
         .lines-list {
-          max-height: 300px;
+          max-height: 420px;
           overflow-y: auto;
           display: flex;
           flex-direction: column;
-          gap: var(--space-2);
+          margin: 0 calc(-1 * var(--space-2));
         }
 
         .line-item {
-          padding: var(--space-3);
-          background-color: var(--bg-primary);
-          border: 1px solid var(--border);
-          border-left: 1px solid var(--speaker-color);
+          display: grid;
+          grid-template-columns: 5.5rem minmax(0, 1fr);
+          column-gap: var(--space-3);
+          padding: var(--space-2);
           border-radius: var(--radius-md);
           cursor: pointer;
-          transition: all var(--transition-fast);
+          transition: background-color var(--transition-fast);
+        }
+
+        .line-item > :not(.line-timing) {
+          grid-column: 2;
         }
 
         .line-item:hover {
-          border-color: var(--border-hover);
-          border-left-color: var(--speaker-color);
+          background-color: var(--surface-panel);
         }
 
         .line-item.selected {
-          border-color: var(--speaker-color);
-          border-left-color: var(--speaker-color);
-          background-color: color-mix(in srgb, var(--speaker-color) 8%, var(--bg-primary));
+          background-color: var(--bg-tertiary);
         }
-
 
         .line-timing {
-          margin-bottom: var(--space-1);
+          grid-row: 1 / span 4;
           display: flex;
-          align-items: center;
-          gap: var(--space-2);
+          flex-direction: column;
+          gap: 0.25rem;
+          padding-top: 0.125rem;
         }
 
-        .timing-badge {
-          font-size: 0.6875rem;
+        .line-time {
           font-family: var(--font-mono);
+          font-size: 0.6875rem;
           color: var(--text-muted);
-          background-color: var(--bg-secondary);
-          padding: var(--space-1) var(--space-2);
-          border-radius: var(--radius-sm);
-        }
-
-        .speaker-badge {
-          font-size: 0.625rem;
-          font-weight: 600;
-          color: white;
-          padding: 2px 6px;
-          border-radius: var(--radius-sm);
+          font-variant-numeric: tabular-nums;
         }
 
         .line-text {
-          font-size: 0.9375rem;
+          font-size: 0.875rem;
           color: var(--text-primary);
-          line-height: 1.4;
+          line-height: 1.5;
           display: flex;
           flex-direction: column;
-          gap: var(--space-1);
+          gap: 0.125rem;
         }
 
         .lead-text {
@@ -929,47 +865,46 @@ export default function Timeline({ ttml }: TimelineProps) {
         .bg-text {
           font-style: italic;
           color: var(--text-secondary);
-          font-size: 0.875rem;
+          font-size: 0.8125rem;
+        }
+
+        .line-item.background-vocals .line-text {
+          font-style: italic;
+          color: var(--text-secondary);
         }
 
         .transliteration-text {
           font-size: 0.8125rem;
           color: var(--text-muted);
-          margin-top: var(--space-1);
         }
 
         .word-breakdown {
           margin-top: var(--space-3);
-          padding-top: var(--space-3);
-          border-top: 1px solid var(--border);
           display: flex;
           flex-direction: column;
-          gap: var(--space-3);
+          gap: var(--space-2);
         }
 
         .word-row {
           display: flex;
           flex-wrap: wrap;
-          gap: var(--space-2);
+          gap: var(--space-1);
         }
 
         .word-item {
           display: flex;
           flex-direction: column;
-          align-items: center;
-          padding: var(--space-1) var(--space-2);
-          background-color: var(--bg-secondary);
-          border-radius: var(--radius-sm);
+          align-items: flex-start;
+          gap: 0.125rem;
+          padding: 0.25rem var(--space-2);
+          background-color: var(--surface-panel);
+          border: 1px solid var(--border-subtle);
+          border-radius: var(--radius-md);
         }
 
         .word-item.background-word .word-text {
           font-style: italic;
           color: var(--text-secondary);
-        }
-
-        .transliteration-row {
-          border-top: 1px dashed var(--border);
-          padding-top: var(--space-2);
         }
 
         .word-item.transliteration-word .word-text {
@@ -979,6 +914,7 @@ export default function Timeline({ ttml }: TimelineProps) {
         .word-text {
           font-size: 0.8125rem;
           color: var(--text-primary);
+          white-space: pre;
         }
 
         .word-time {

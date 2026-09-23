@@ -4,8 +4,8 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
 
 <DocsLayout title="Providers">
   <p>
-    The API supports multiple lyrics providers, each with different strengths and response formats.
-    The default endpoint uses TTML, but you can explicitly choose a provider for specific use cases.
+    The API supports several lyrics providers. They differ in coverage, timing detail and response format.
+    The default endpoint uses TTML, and you can pick another provider when you need to.
   </p>
 
   <h2>Available providers</h2>
@@ -16,7 +16,7 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
         <h3>TTML</h3>
         <span class="badge default">Default</span>
       </div>
-      <p>Syllable-level synchronized lyrics with precise timing data.</p>
+      <p>Syllable-synced lyrics with precise timing.</p>
       <table class="provider-details">
         <tr>
           <td>Endpoint</td>
@@ -41,7 +41,7 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
       <div class="provider-header">
         <h3>Kugou</h3>
       </div>
-      <p>Line-level synchronized lyrics with broad coverage.</p>
+      <p>Line-synced lyrics with broad coverage.</p>
       <table class="provider-details">
         <tr>
           <td>Endpoint</td>
@@ -64,67 +64,94 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
 
     <div class="provider-card">
       <div class="provider-header">
-        <h3>Legacy</h3>
-        <span class="badge deprecated">Deprecated</span>
+        <h3>QQ</h3>
       </div>
-      <p>Older provider kept for backwards compatibility.</p>
+      <p>Word-timed lyrics, useful when TTML has no match.</p>
       <table class="provider-details">
         <tr>
           <td>Endpoint</td>
-          <td><code>/legacy/getLyrics</code></td>
+          <td><code>/qq/getLyrics</code></td>
         </tr>
         <tr>
           <td>Sync level</td>
-          <td>Line</td>
+          <td>Word</td>
         </tr>
         <tr>
           <td>Best for</td>
-          <td>Fallback only</td>
+          <td>Word highlighting when TTML returns no results</td>
         </tr>
         <tr>
           <td>Response format</td>
-          <td>JSON with lines array</td>
+          <td><a href="/docs/qrc-format">QRC XML</a></td>
         </tr>
       </table>
     </div>
   </div>
 
   <h2>Choosing a provider</h2>
-  <p>Use the default TTML provider unless you have specific needs:</p>
+  <p>Use the default TTML provider unless you need something else:</p>
   <ul>
-    <li><strong>TTML</strong> - Best overall coverage and precision. Use for karaoke-style syllable highlighting.</li>
-    <li><strong>Kugou</strong> - Line-level sync with broad coverage. Use if TTML returns no results.</li>
-    <li><strong>Legacy</strong> - Avoid unless you have existing code depending on its format.</li>
+    <li>TTML has the best overall coverage and precision. Use it for karaoke-style syllable highlighting.</li>
+    <li>Kugou is line-synced with broad coverage. Use it if TTML returns no results.</li>
+    <li>QQ is word-timed. Use it if TTML returns no results and you still want timing finer than a line.</li>
   </ul>
 
   <h2>Response differences</h2>
+  <p>
+    Each provider returns a different format. <a href="/braccato/parsers"><code>@braccato/parsers</code></a>
+    reads all three into the same line structure, so you can switch providers without changing your
+    rendering code.
+  </p>
 
   <h3>TTML response</h3>
+  <p><code>/getLyrics</code> returns:</p>
   <pre><code class="language-json">{`{
   "ttml": "<?xml version=\\"1.0\\"?>..."
 }`}</code></pre>
+  <p><code>/ttml/getLyrics</code> uses the same shape as the other provider-specific endpoints:</p>
+  <pre><code class="language-json">{`{
+  "lyrics": "<?xml version=\\"1.0\\"?>...",
+  "provider": "ttml"
+}`}</code></pre>
 
-  <h3>Kugou/Legacy response</h3>
+  <h3>Kugou response</h3>
   <pre><code class="language-json">{`{
   "lyrics": "[00:12.34]First line of lyrics\\n[00:15.67]Second line...",
   "provider": "kugou"
 }`}</code></pre>
 
+  <h3>QQ response</h3>
+  <pre><code class="language-json">{`{
+  "lyrics": "<?xml version=\"1.0\" encoding=\"utf-8\"?><QrcInfos>...[5767,324]Wanderlust - (5767,109)The (5876,106)Weeknd(5982,109)...</QrcInfos>",
+  "provider": "qq"
+}`}</code></pre>
+  <p>
+    The QRC body sits inside an XML envelope, with word timing after each word. See
+    <a href="/docs/qrc-format">QRC format</a> for the structure and how to parse it.
+  </p>
+
   <h2>Provider-specific headers</h2>
-  <p>The <code>X-Provider</code> header indicates which provider served the response:</p>
+  <p>
+    The provider-specific endpoints send an <code>X-Provider</code> header that indicates which provider served
+    the response. <code>/getLyrics</code> does not send it:
+  </p>
   <pre><code>X-Provider: ttml</code></pre>
 
   <h2>Cache isolation</h2>
   <p>
     Each provider has its own cache namespace. A song cached via TTML will not be served
-    when requesting via Kugou, and vice versa. This ensures you always get the format you expect.
+    when you request via Kugou or QQ, and the other way around. That way you always get the format you asked for.
   </p>
   <p>Cache key prefixes:</p>
   <ul>
-    <li><code>ttml_lyrics:</code> - TTML provider</li>
-    <li><code>kugou_lyrics:</code> - Kugou provider</li>
-    <li><code>legacy_lyrics:</code> - Legacy provider</li>
+    <li><code>ttml_lyrics:</code> for TTML</li>
+    <li><code>kugou_lyrics:</code> for Kugou</li>
+    <li><code>qq_lyrics:</code> for QQ</li>
   </ul>
+  <p>
+    <code>/getLyrics</code> and <code>/ttml/getLyrics</code> both use <code>ttml_lyrics:</code>, but format the album and
+    duration in the key differently, so they share entries only when neither album nor duration is sent.
+  </p>
 </DocsLayout>
 
 <style>
@@ -159,18 +186,11 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
     font-weight: 600;
     padding: var(--space-1) var(--space-2);
     border-radius: var(--radius-sm);
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
   }
 
   .badge.default {
     background-color: rgba(34, 197, 94, 0.1);
     color: var(--success);
-  }
-
-  .badge.deprecated {
-    background-color: rgba(245, 158, 11, 0.1);
-    color: var(--warning);
   }
 
   .provider-card > p {
