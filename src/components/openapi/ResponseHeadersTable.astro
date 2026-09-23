@@ -1,0 +1,26 @@
+---
+import { getSpec, inlineMarkdown, responseHeaderRows } from '../../openapi';
+
+interface Props {
+  path: string;
+}
+
+const rows = responseHeaderRows(await getSpec(), Astro.props.path);
+---
+
+<table>
+  <thead>
+    <tr>
+      <th>Header</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    {rows.map((row) => (
+      <tr>
+        <td><code set:text={row.name} /></td>
+        <td set:html={inlineMarkdown(row.description)} />
+      </tr>
+    ))}
+  </tbody>
+</table>

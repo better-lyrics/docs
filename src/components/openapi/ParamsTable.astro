@@ -1,0 +1,36 @@
+---
+import { LOOKUP_PARAMS } from '../../api';
+import { getSpec, inlineMarkdown, parameterRows } from '../../openapi';
+
+interface Props {
+  path: string;
+}
+
+const rows = parameterRows(await getSpec(), Astro.props.path);
+
+function requirement(names: string[], required: boolean): string {
+  if (LOOKUP_PARAMS.includes(names[0])) return 'Always send';
+  return required ? 'Yes' : 'No';
+}
+---
+
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Required</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    {rows.map((row) => (
+      <tr>
+        <td set:html={row.names.map((name) => `<code>${name}</code>`).join(', ')} />
+        <td>{row.type}</td>
+        <td>{requirement(row.names, row.required)}</td>
+        <td set:html={inlineMarkdown(row.description)} />
+      </tr>
+    ))}
+  </tbody>
+</table>

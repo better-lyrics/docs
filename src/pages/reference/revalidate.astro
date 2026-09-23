@@ -1,6 +1,8 @@
 ---
 import CodeTabs from '../../components/CodeTabs.astro';
 import DocsLayout from '../../layouts/DocsLayout.astro';
+import FieldsTable from '../../components/openapi/FieldsTable.astro';
+import ParamsTable from '../../components/openapi/ParamsTable.astro';
 ---
 
 <DocsLayout title="GET /revalidate">
@@ -16,42 +18,7 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
   </p>
 
   <h2>Parameters</h2>
-  <table>
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>Type</th>
-        <th>Required</th>
-        <th>Description</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td><code>s</code>, <code>song</code>, <code>songName</code></td>
-        <td>string</td>
-        <td>Yes</td>
-        <td>Song title</td>
-      </tr>
-      <tr>
-        <td><code>a</code>, <code>artist</code>, <code>artistName</code></td>
-        <td>string</td>
-        <td>Yes</td>
-        <td>Artist name</td>
-      </tr>
-      <tr>
-        <td><code>al</code>, <code>album</code>, <code>albumName</code></td>
-        <td>string</td>
-        <td>Always send</td>
-        <td>Album name</td>
-      </tr>
-      <tr>
-        <td><code>d</code>, <code>duration</code></td>
-        <td>string of digits</td>
-        <td>Always send</td>
-        <td>Track duration in whole seconds</td>
-      </tr>
-    </tbody>
-  </table>
+  <ParamsTable path="/revalidate" />
 
   <h2>Headers</h2>
   <table>
@@ -134,37 +101,7 @@ func main() {
 }`}</code></pre>
 
   <h2>Response fields</h2>
-  <table>
-    <thead>
-      <tr>
-        <th>Field</th>
-        <th>Type</th>
-        <th>Description</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td><code>updated</code></td>
-        <td>boolean</td>
-        <td>Whether the cache was updated with new content</td>
-      </tr>
-      <tr>
-        <td><code>cacheKey</code></td>
-        <td>string</td>
-        <td>The cache key that was revalidated</td>
-      </tr>
-      <tr>
-        <td><code>wasNegativeCache</code></td>
-        <td>boolean</td>
-        <td>Whether the previous entry was a negative cache (no lyrics found). Not sent when <code>error</code> is set.</td>
-      </tr>
-      <tr>
-        <td><code>error</code></td>
-        <td>string</td>
-        <td>Why the upstream fetch failed. Only when <code>updated</code> is <code>false</code> because of a failure.</td>
-      </tr>
-    </tbody>
-  </table>
+  <FieldsTable path="/revalidate" describe={{ cacheKey: 'The cache key that was revalidated.' }} />
 
   <h2>When to use</h2>
   <ul>

@@ -1,6 +1,9 @@
 ---
 import CodeTabs from '../../components/CodeTabs.astro';
 import DocsLayout from '../../layouts/DocsLayout.astro';
+import FieldsTable from '../../components/openapi/FieldsTable.astro';
+import ParamsTable from '../../components/openapi/ParamsTable.astro';
+import ResponseHeadersTable from '../../components/openapi/ResponseHeadersTable.astro';
 ---
 
 <DocsLayout title="GET /getLyrics">
@@ -16,48 +19,7 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
   </p>
 
   <h2>Parameters</h2>
-  <table>
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>Type</th>
-        <th>Required</th>
-        <th>Description</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td><code>s</code>, <code>song</code>, <code>songName</code></td>
-        <td>string</td>
-        <td>Always send</td>
-        <td>Song title</td>
-      </tr>
-      <tr>
-        <td><code>a</code>, <code>artist</code>, <code>artistName</code></td>
-        <td>string</td>
-        <td>Always send</td>
-        <td>Artist name</td>
-      </tr>
-      <tr>
-        <td><code>al</code>, <code>album</code>, <code>albumName</code></td>
-        <td>string</td>
-        <td>Always send</td>
-        <td>Album name</td>
-      </tr>
-      <tr>
-        <td><code>d</code>, <code>duration</code></td>
-        <td>string of digits</td>
-        <td>Always send</td>
-        <td>Track duration in whole seconds, for example <code>154</code></td>
-      </tr>
-      <tr>
-        <td><code>videoId</code>, <code>v</code></td>
-        <td>string</td>
-        <td>No</td>
-        <td>Video ID of the track. It is stored with the song so that downstream caches can be refreshed. It does not change matching.</td>
-      </tr>
-    </tbody>
-  </table>
+  <ParamsTable path="/getLyrics" />
   <p class="note">
     The API rejects a request (<code>422</code>) only when both song and artist are missing. Send all four
     anyway: the cache key includes album and duration, so a request without them often misses the cached
@@ -126,71 +88,10 @@ func main() {
 }`}</code></pre>
 
   <h2>Response fields</h2>
-  <table>
-    <thead>
-      <tr>
-        <th>Field</th>
-        <th>Type</th>
-        <th>Description</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td><code>ttml</code></td>
-        <td>string</td>
-        <td>The TTML document</td>
-      </tr>
-      <tr>
-        <td><code>score</code></td>
-        <td>number</td>
-        <td>
-          Match confidence from <code>0</code> to <code>1</code>. Sent only when the lyrics were fetched
-          for this request, or when the request joined a fetch for the same query that was already in progress.
-          Cache hits and <code>STALE</code> responses have only <code>ttml</code>.
-        </td>
-      </tr>
-    </tbody>
-  </table>
+  <FieldsTable path="/getLyrics" />
 
   <h2>Response headers</h2>
-  <table>
-    <thead>
-      <tr>
-        <th>Header</th>
-        <th>Description</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td><code>X-Cache-Status</code></td>
-        <td><code>HIT</code>, <code>MISS</code>, <code>NEGATIVE_HIT</code>, or <code>STALE</code>. A request that joined a fetch already in progress gets <code>HIT</code>.</td>
-      </tr>
-      <tr>
-        <td><code>X-RateLimit-Limit</code></td>
-        <td>Burst size of the current rate limit tier. Not sent with a valid API key.</td>
-      </tr>
-      <tr>
-        <td><code>X-RateLimit-Remaining</code></td>
-        <td>Requests left in the current tier. Not sent with a valid API key.</td>
-      </tr>
-      <tr>
-        <td><code>X-RateLimit-Type</code></td>
-        <td><code>normal</code>, <code>cached</code>, <code>exceeded</code>, or <code>bypass</code></td>
-      </tr>
-      <tr>
-        <td><code>X-RateLimit-Bypass</code></td>
-        <td><code>true</code> when a valid API key skipped rate limiting</td>
-      </tr>
-      <tr>
-        <td><code>X-Auth-Mode</code></td>
-        <td><code>authenticated</code>, <code>invalid</code>, or <code>cache</code>. Sent only when the server enforces API keys.</td>
-      </tr>
-      <tr>
-        <td><code>Retry-After</code></td>
-        <td>Seconds to wait. Only on <code>429</code> responses.</td>
-      </tr>
-    </tbody>
-  </table>
+  <ResponseHeadersTable path="/getLyrics" />
   <p>
     <code>/getLyrics</code> does not send <code>X-Provider</code>. See
     <a href="#provider-specific-endpoints">Provider-specific endpoints</a> for the endpoints that do.

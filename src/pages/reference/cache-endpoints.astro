@@ -1,6 +1,8 @@
 ---
 import CodeTabs from '../../components/CodeTabs.astro';
 import DocsLayout from '../../layouts/DocsLayout.astro';
+import FieldsTable from '../../components/openapi/FieldsTable.astro';
+import ParamsTable from '../../components/openapi/ParamsTable.astro';
 ---
 
 <DocsLayout title="Cache endpoints">
@@ -118,32 +120,7 @@ func main() {
   </p>
 
   <h3>Parameters</h3>
-  <table>
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>Description</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td><code>s</code>, <code>song</code>, <code>songName</code></td>
-        <td>Song name</td>
-      </tr>
-      <tr>
-        <td><code>a</code>, <code>artist</code>, <code>artistName</code></td>
-        <td>Artist name</td>
-      </tr>
-      <tr>
-        <td><code>al</code>, <code>album</code>, <code>albumName</code></td>
-        <td>Album name. Always send it</td>
-      </tr>
-      <tr>
-        <td><code>d</code>, <code>duration</code></td>
-        <td>Duration in whole seconds. Always send it</td>
-      </tr>
-    </tbody>
-  </table>
+  <ParamsTable path="/cache/lookup" />
   <p>
     Send all four: the cache keys include album and duration, so a lookup without them checks a different key
     than the one your lyrics requests use. The API rejects a request with <code>400</code> only when both song and
@@ -218,87 +195,35 @@ func main() {
 }`}</code></pre>
 
   <h3>Response fields</h3>
-  <table>
-    <thead>
-      <tr>
-        <th>Field</th>
-        <th>Description</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td><code>query</code></td>
-        <td>The <code>song</code>, <code>artist</code>, <code>album</code> and <code>duration</code> values as received</td>
-      </tr>
-      <tr>
-        <td><code>normalized_key</code></td>
-        <td>Cache key in the current format (lowercase, trimmed)</td>
-      </tr>
-      <tr>
-        <td><code>legacy_key</code></td>
-        <td>Cache key in the older format (original case, not trimmed)</td>
-      </tr>
-      <tr>
-        <td><code>keys_differ</code></td>
-        <td>Whether the two keys are different</td>
-      </tr>
-      <tr>
-        <td><code>found</code></td>
-        <td>Whether lyrics are cached under either key</td>
-      </tr>
-      <tr>
-        <td><code>found_in</code></td>
-        <td><code>normalized</code> or <code>legacy</code>. Only when <code>found</code> is <code>true</code>.</td>
-      </tr>
-      <tr>
-        <td><code>note</code></td>
-        <td>Set when the entry was found under the legacy key</td>
-      </tr>
-      <tr>
-        <td><code>track_duration_ms</code>, <code>score</code>, <code>language</code>, <code>isRTL</code></td>
-        <td>Stored metadata of the entry. Only when <code>found</code> is <code>true</code>.</td>
-      </tr>
-      <tr>
-        <td><code>ttml_length</code>, <code>ttml_preview</code></td>
-        <td>Length of the stored lyrics and their first 200 characters. Only when <code>found</code> is <code>true</code>.</td>
-      </tr>
-      <tr>
-        <td><code>negative_cache</code>, <code>negative_reason</code></td>
-        <td>Set when no lyrics are cached but a negative entry exists</td>
-      </tr>
-      <tr>
-        <td><code>negative_cache_in</code></td>
-        <td><code>legacy</code> when the negative entry was found under the legacy key</td>
-      </tr>
-    </tbody>
-  </table>
+  <FieldsTable
+    path="/cache/lookup"
+    describe={{
+      query: 'The `song`, `artist`, `album` and `duration` values as received.',
+      normalized_key: 'Cache key in the current format (lowercase, trimmed).',
+      legacy_key: 'Cache key in the older format (original case, not trimmed).',
+      keys_differ: 'Whether the two keys are different.',
+      found: 'Whether lyrics are cached under either key.',
+      found_in: 'Only when `found` is `true`.',
+      note: 'Set when the entry was found under the legacy key.',
+      track_duration_ms: 'Stored metadata of the entry. Only when `found` is `true`.',
+      language: 'Stored metadata of the entry. Only when `found` is `true`.',
+      isRTL: 'Stored metadata of the entry. Only when `found` is `true`.',
+      ttml_length: 'Length of the stored lyrics. Only when `found` is `true`.',
+      negative_cache: 'Set when no lyrics are cached but a negative entry exists.',
+      negative_reason: 'Set when no lyrics are cached but a negative entry exists.',
+      negative_cache_in: 'Set when the negative entry was found under the legacy key.',
+      'query.song': 'As received.',
+      'query.artist': 'As received.',
+      'query.album': 'As received.',
+      'query.duration': 'As received.',
+    }}
+  />
 
   <h2>GET /cache/keys</h2>
   <p>List and search cache keys.</p>
 
   <h3>Parameters</h3>
-  <table>
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>Description</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td><code>prefix</code></td>
-        <td>Only keys that start with this string (case-sensitive)</td>
-      </tr>
-      <tr>
-        <td><code>contains</code></td>
-        <td>Only keys that contain this string (not case-sensitive)</td>
-      </tr>
-      <tr>
-        <td><code>limit</code></td>
-        <td>Maximum results (default 100, max 1000)</td>
-      </tr>
-    </tbody>
-  </table>
+  <ParamsTable path="/cache/keys" />
 
   <h3>Example</h3>
   <CodeTabs tabs={[
@@ -358,52 +283,25 @@ func main() {
 }`}</code></pre>
 
   <h3>Response fields</h3>
-  <table>
-    <thead>
-      <tr>
-        <th>Field</th>
-        <th>Description</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td><code>total_keys</code></td>
-        <td>Number of cached lyrics keys that match the filters</td>
-      </tr>
-      <tr>
-        <td><code>matched_keys</code></td>
-        <td>Number of keys in this response (at most <code>limit</code>)</td>
-      </tr>
-      <tr>
-        <td><code>limit</code></td>
-        <td>The limit that was applied</td>
-      </tr>
-      <tr>
-        <td><code>keys</code></td>
-        <td>Keys in alphabetical order. <code>size</code> is the size of the stored lyrics in bytes.</td>
-      </tr>
-    </tbody>
-  </table>
+  <FieldsTable
+    path="/cache/keys"
+    describe={{
+      total_keys: 'Number of cached lyrics keys that match the filters.',
+      matched_keys: 'Number of keys in this response (at most `limit`).',
+      limit: 'The limit that was applied.',
+      keys: 'Keys in alphabetical order.',
+      'keys[].key': 'The cache key.',
+      'keys[].size': 'Size of the stored lyrics in bytes.',
+      'keys[].provider': 'Provider of the entry.',
+    }}
+  />
   <p>Negative cache entries are not listed.</p>
 
   <h2>GET /cache/debug</h2>
   <p>Inspect a specific cache entry.</p>
 
   <h3>Parameters</h3>
-  <table>
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>Description</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td><code>key</code></td>
-        <td>The full cache key to inspect</td>
-      </tr>
-    </tbody>
-  </table>
+  <ParamsTable path="/cache/debug" />
 
   <h3>Example</h3>
   <CodeTabs tabs={[
@@ -462,43 +360,18 @@ func main() {
 }`}</code></pre>
 
   <h3>Response fields</h3>
-  <table>
-    <thead>
-      <tr>
-        <th>Field</th>
-        <th>Description</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td><code>key</code></td>
-        <td>The key that was inspected</td>
-      </tr>
-      <tr>
-        <td><code>found</code></td>
-        <td>Whether an entry exists for the key</td>
-      </tr>
-      <tr>
-        <td><code>type</code></td>
-        <td>
-          <code>lyrics</code>, <code>no_lyrics_sentinel</code> (a stored "no lyrics" marker), or
-          <code>negative_cache</code>. Only when <code>found</code> is <code>true</code>.
-        </td>
-      </tr>
-      <tr>
-        <td><code>reason</code></td>
-        <td>Why no lyrics were found. Only when <code>type</code> is <code>negative_cache</code>.</td>
-      </tr>
-      <tr>
-        <td><code>track_duration_ms</code>, <code>score</code>, <code>language</code>, <code>isRTL</code></td>
-        <td>Stored metadata. Only when <code>type</code> is <code>lyrics</code>.</td>
-      </tr>
-      <tr>
-        <td><code>ttml_length</code>, <code>ttml_preview</code></td>
-        <td>Length of the stored lyrics and their first 300 characters. Only when <code>type</code> is <code>lyrics</code>.</td>
-      </tr>
-    </tbody>
-  </table>
+  <FieldsTable
+    path="/cache/debug"
+    describe={{
+      key: 'The key that was inspected.',
+      found: 'Whether an entry exists for the key.',
+      type: '`no_lyrics_sentinel` is a stored "no lyrics" marker. Only when `found` is `true`.',
+      track_duration_ms: 'Stored metadata. Only when `type` is `lyrics`.',
+      language: 'Stored metadata. Only when `type` is `lyrics`.',
+      isRTL: 'Stored metadata. Only when `type` is `lyrics`.',
+      ttml_length: 'Length of the stored lyrics. Only when `type` is `lyrics`.',
+    }}
+  />
   <p>Without the <code>key</code> parameter, the response is <code>400</code> with <code>{`{"error": "Provide 'key' parameter"}`}</code>.</p>
 
   <h2>GET /cache/clear</h2>

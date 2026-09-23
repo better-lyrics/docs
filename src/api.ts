@@ -7,3 +7,5 @@ export const PROVIDER_ENDPOINTS: Record<Provider, string> = {
   kugou: '/kugou/getLyrics',
   qq: '/qq/getLyrics',
 };
+
+export const LOOKUP_PARAMS = ['s', 'a', 'al', 'd'];

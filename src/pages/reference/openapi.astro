@@ -1,0 +1,45 @@
+---
+import DocsLayout from '../../layouts/DocsLayout.astro';
+import { endpointRows, getSpec, SPEC_URL } from '../../openapi';
+
+const rows = endpointRows(await getSpec());
+---
+
+<DocsLayout title="OpenAPI spec">
+  <p class="endpoint-badge">
+    <span class="method">GET</span>
+    <code>/openapi.json</code>
+  </p>
+
+  <p>
+    The API publishes an OpenAPI 3.1 document at <a href={SPEC_URL}>{SPEC_URL}</a>. Point a client
+    generator, an API client or an agent at it. The parameter, field and header tables on these reference
+    pages are built from the same document, so they match what the API actually does.
+  </p>
+
+  <pre><code class="language-bash">{`curl -o openapi.json ${SPEC_URL}`}</code></pre>
+
+  <p>
+    The response is cached for five minutes (<code>Cache-Control: public, max-age=300</code>).
+  </p>
+
+  <h2>Endpoints</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Method</th>
+        <th>Path</th>
+        <th>Summary</th>
+      </tr>
+    </thead>
+    <tbody>
+      {rows.map((row) => (
+        <tr>
+          <td>{row.method}</td>
+          <td><code set:text={row.path} /></td>
+          <td>{row.deprecated ? `${row.summary}. Returns 410.` : row.summary}</td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</DocsLayout>

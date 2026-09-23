@@ -35,6 +35,7 @@ const referenceLinks: NavLink[] = [
   { href: '/reference/revalidate', label: 'GET /revalidate', description: 'Reference for GET /revalidate: refresh cached lyrics for a song with an API key.' },
   { href: '/reference/health', label: 'GET /health', description: 'Reference for GET /health: check that the Better Lyrics API is up and serving requests.' },
   { href: '/reference/cache-endpoints', label: 'Cache endpoints', description: 'Reference for the admin cache endpoints: lookup, keys, debug and clear, plus the removed backup endpoints.' },
+  { href: '/reference/openapi', label: 'OpenAPI spec', description: 'The OpenAPI 3.1 document for the Better Lyrics API, and every endpoint it describes.' },
 ];
 
 export const navSections: NavSection[] = [

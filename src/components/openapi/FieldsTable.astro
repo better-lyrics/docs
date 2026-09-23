@@ -1,0 +1,42 @@
+---
+import { fieldRows, getSpec, inlineMarkdown } from '../../openapi';
+
+interface Props {
+  path: string;
+  status?: string;
+  describe?: Record<string, string>;
+}
+
+const { path, status = '200', describe = {} } = Astro.props;
+const rows = fieldRows(await getSpec(), path, status);
+
+for (const [name, text] of Object.entries(describe)) {
+  const row = rows.find((candidate) => candidate.name === name);
+  if (!row) throw new Error(`FieldsTable ${path} ${status}: "${name}" is not in the OpenAPI spec`);
+  if (row.description && !row.description.startsWith('One of')) {
+    throw new Error(`FieldsTable ${path} ${status}: the spec now describes "${name}", remove the docs description`);
+  }
+  row.description = [text, row.description].filter(Boolean).join(' ');
+}
+---
+
+<table>
+  <thead>
+    <tr>
+      <th>Field</th>
+      <th>Type</th>
+      <th>Always present</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    {rows.map((row) => (
+      <tr>
+        <td><code set:text={row.name} /></td>
+        <td>{row.type}</td>
+        <td>{row.required ? 'Yes' : 'No'}</td>
+        <td set:html={inlineMarkdown(row.description)} />
+      </tr>
+    ))}
+  </tbody>
+</table>

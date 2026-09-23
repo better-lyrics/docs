@@ -1,6 +1,7 @@
 ---
 import CodeTabs from '../../components/CodeTabs.astro';
 import DocsLayout from '../../layouts/DocsLayout.astro';
+import FieldsTable from '../../components/openapi/FieldsTable.astro';
 ---
 
 <DocsLayout title="GET /health">
@@ -78,57 +79,24 @@ func main() {
 }`}</code></pre>
 
   <h2>Response fields</h2>
-  <table>
-    <thead>
-      <tr>
-        <th>Field</th>
-        <th>Type</th>
-        <th>Description</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td><code>status</code></td>
-        <td>string</td>
-        <td><code>ok</code>, <code>degraded</code>, or <code>unhealthy</code></td>
-      </tr>
-      <tr>
-        <td><code>accounts</code></td>
-        <td>number</td>
-        <td>Number of configured upstream accounts</td>
-      </tr>
-      <tr>
-        <td><code>accounts_active</code></td>
-        <td>number</td>
-        <td>Accounts that are in service</td>
-      </tr>
-      <tr>
-        <td><code>accounts_out_of_service</code></td>
-        <td>number</td>
-        <td>Accounts that are configured but out of service</td>
-      </tr>
-      <tr>
-        <td><code>circuit_breaker</code></td>
-        <td>string</td>
-        <td><code>CLOSED</code>, <code>OPEN</code>, <code>HALF-OPEN</code>, <code>UNINITIALIZED</code> (not started yet), or <code>UNKNOWN</code></td>
-      </tr>
-      <tr>
-        <td><code>circuit_breaker_retry_in</code></td>
-        <td>string</td>
-        <td>Time until the circuit breaker lets a test request through, for example <code>4m30s</code>. Only when <code>circuit_breaker</code> is <code>OPEN</code>.</td>
-      </tr>
-      <tr>
-        <td><code>cache_ready</code></td>
-        <td>boolean</td>
-        <td>Whether the cache is ready</td>
-      </tr>
-      <tr>
-        <td><code>error</code></td>
-        <td>string</td>
-        <td>Why the service is unhealthy. Only when <code>status</code> is <code>unhealthy</code>.</td>
-      </tr>
-    </tbody>
-  </table>
+  <FieldsTable
+    path="/health"
+    describe={{
+      accounts: 'Number of configured upstream accounts.',
+      accounts_active: 'Accounts that are in service.',
+      accounts_out_of_service: 'Accounts that are configured but out of service.',
+      cache_ready: 'Whether the cache is ready.',
+      'tokens[].name': '`shared_bearer_token` for the shared token, or the account name.',
+      'tokens[].type': '`bearer` for the shared token, `mut` for an account token.',
+      'tokens[].status': 'See the token status values below.',
+      'tokens[].expires': 'Expiry time as `YYYY-MM-DD HH:MM:SS`. `bearer` only, when initialized.',
+      'tokens[].remaining_minutes': 'Minutes until expiry. `bearer` only, when initialized.',
+      'tokens[].last_checked': 'Time of the last health check (RFC 3339). `mut` only, after a check has run.',
+      'tokens[].last_error': 'Error from the last health check. Only when `status` is `unhealthy`.',
+      'tokens[].reason': 'Why the account is out of service. Only when `status` is `out_of_service`.',
+      'tokens[].note': 'Only when `status` is `unknown`.',
+    }}
+  />
 
   <h2>Status values</h2>
   <table>
@@ -233,87 +201,6 @@ func main() {
     }
   ]
 }`}</code></pre>
-
-  <h2>Additional fields</h2>
-  <table>
-    <thead>
-      <tr>
-        <th>Field</th>
-        <th>Type</th>
-        <th>Description</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td><code>circuit_breaker_failures</code></td>
-        <td>number</td>
-        <td>Current failure count of the circuit breaker</td>
-      </tr>
-      <tr>
-        <td><code>tokens</code></td>
-        <td>array</td>
-        <td>One entry for the shared token and one for each account</td>
-      </tr>
-    </tbody>
-  </table>
-
-  <h3>Token fields</h3>
-  <table>
-    <thead>
-      <tr>
-        <th>Field</th>
-        <th>Type</th>
-        <th>Description</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td><code>name</code></td>
-        <td>string</td>
-        <td><code>shared_bearer_token</code> for the shared token, or the account name</td>
-      </tr>
-      <tr>
-        <td><code>type</code></td>
-        <td>string</td>
-        <td><code>bearer</code> for the shared token, <code>mut</code> for an account token</td>
-      </tr>
-      <tr>
-        <td><code>status</code></td>
-        <td>string</td>
-        <td>See <a href="#token-status-values">Token status values</a></td>
-      </tr>
-      <tr>
-        <td><code>expires</code></td>
-        <td>string</td>
-        <td>Expiry time as <code>YYYY-MM-DD HH:MM:SS</code>. <code>bearer</code> only, when initialized.</td>
-      </tr>
-      <tr>
-        <td><code>remaining_minutes</code></td>
-        <td>number</td>
-        <td>Minutes until expiry. <code>bearer</code> only, when initialized.</td>
-      </tr>
-      <tr>
-        <td><code>last_checked</code></td>
-        <td>string</td>
-        <td>Time of the last health check (RFC 3339). <code>mut</code> only, after a check has run.</td>
-      </tr>
-      <tr>
-        <td><code>last_error</code></td>
-        <td>string</td>
-        <td>Error from the last health check. Only when <code>status</code> is <code>unhealthy</code>.</td>
-      </tr>
-      <tr>
-        <td><code>reason</code></td>
-        <td>string</td>
-        <td>Why the account is out of service. Only when <code>status</code> is <code>out_of_service</code>.</td>
-      </tr>
-      <tr>
-        <td><code>note</code></td>
-        <td>string</td>
-        <td>Only when <code>status</code> is <code>unknown</code></td>
-      </tr>
-    </tbody>
-  </table>
 
   <h2 id="token-status-values">Token status values</h2>
   <table>
