@@ -309,6 +309,7 @@ export default function BraccatoExample({
         }
 
         .bx-docs:hover {
+          color: var(--bg-primary);
           opacity: 0.88;
         }
 
