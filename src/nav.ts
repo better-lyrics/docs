@@ -6,7 +6,7 @@ export interface NavLink {
 
 export const headerLinks = [
   { href: '/', label: 'Docs', match: (path: string) => path === '/' || path.startsWith('/docs') },
-  { href: '/braccato', label: 'Braccato', match: (path: string) => path.startsWith('/braccato') },
+  { href: '/braccato', label: 'Braccato', match: (path: string) => path.startsWith('/braccato') || path === '/changelog' },
   { href: '/unison', label: 'Unison', match: (path: string) => path === '/unison' },
   { href: '/theming', label: 'Theming', match: (path: string) => path.startsWith('/theming') },
   { href: '/playground', label: 'Playground', match: (path: string) => path === '/playground' },
@@ -29,7 +29,6 @@ const conceptsLinks: NavLink[] = [
   { href: '/docs/qrc-format', label: 'QRC format', description: 'The QRC format returned by the QQ provider: XML envelope, line and word timing, credit lines and how to parse it.' },
   { href: '/docs/error-handling', label: 'Error handling', description: 'Status codes and error bodies returned by the Better Lyrics API, and how to handle each one in your client.' },
   { href: '/docs/best-practices', label: 'Best practices', description: 'Recommendations for caching, request parameters, parsing and rendering when you build on the Better Lyrics API.' },
-  { href: '/changelog', label: 'Changelog', description: 'Notable changes to the Better Lyrics API and the Braccato packages.' },
 ];
 
 const referenceLinks: NavLink[] = [
@@ -49,6 +48,7 @@ export const navSections: NavSection[] = [
       { href: '/braccato/parsers', label: 'Parsers', description: 'Parse TTML, LRC and QRC responses from every Better Lyrics API provider into one shape with @braccato/parsers.' },
       { href: '/braccato/renderer', label: 'Renderer', description: 'Render synced lyrics with the <braccato-lyrics> custom element from @braccato/core: properties, events, scrolling and theming.' },
       { href: '/braccato/provider', label: 'Provider', description: 'Fetch lyrics from several providers with fallback using @braccato/provider-blyrics.' },
+      { href: '/changelog', label: 'Changelog', description: 'Notable changes to the Better Lyrics API and the Braccato packages.' },
     ],
   },
   {

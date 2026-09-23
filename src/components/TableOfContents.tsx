@@ -6,12 +6,38 @@ interface TocItem {
   level: number;
 }
 
+interface Row {
+  top: number;
+  height: number;
+  x: number;
+}
+
+const LEVEL_2_X = 0.5;
+const LEVEL_3_X = 10.5;
+const STEP_REACH = 11;
+
+function railPath(rows: Row[]): string {
+  return rows
+    .map((row, i) => {
+      const prev = rows[i - 1];
+      const next = rows[i + 1];
+      const end = next && next.x !== row.x ? next.top - STEP_REACH : row.top + row.height;
+      if (!prev) return `M${row.x} ${row.top}V${end}`;
+      if (prev.x === row.x) return `V${end}`;
+      return `C${prev.x} ${row.top} ${row.x} ${row.top} ${row.x} ${row.top + STEP_REACH}V${end}`;
+    })
+    .join('');
+}
+
 export default function TableOfContents() {
   const [items, setItems] = useState<TocItem[]>([]);
   const [activeId, setActiveId] = useState<string>('');
   const isClickScrolling = useRef(false);
   const clickedId = useRef<string>('');
+  const clickScrollIdle = useRef<ReturnType<typeof setTimeout>>();
   const railRef = useRef<HTMLDivElement>(null);
+  const tocRef = useRef<HTMLElement>(null);
+  const [rows, setRows] = useState<Row[]>([]);
   const [indicator, setIndicator] = useState<{ top: number; height: number; animate: boolean } | null>(null);
 
   useEffect(() => {
@@ -42,7 +68,6 @@ export default function TableOfContents() {
 
     setItems(tocItems);
 
-    // Track active heading based on scroll position (center of viewport)
     const updateActiveHeading = () => {
       // Skip if we're in click-scroll mode
       if (isClickScrolling.current) return;
@@ -52,41 +77,15 @@ export default function TableOfContents() {
 
       const scrollY = window.scrollY;
       const viewportHeight = window.innerHeight;
-      const viewportCenter = scrollY + viewportHeight / 2;
 
-      // Check if we're at the bottom of the page
-      const isAtBottom = viewportHeight + scrollY >= document.documentElement.scrollHeight - 50;
-
-      if (isAtBottom) {
-        // If at bottom, highlight the last heading
+      if (viewportHeight + scrollY >= document.documentElement.scrollHeight - 50) {
         setActiveId(headingElements[headingElements.length - 1].id);
         return;
       }
 
-      // Check if we're at the top of the page
-      const isAtTop = scrollY < 100;
-      if (isAtTop && headingElements.length > 0) {
-        setActiveId(headingElements[0].id);
-        return;
-      }
-
-      // Find the heading whose section contains the viewport center
-      // A section spans from one heading to the next
-      let activeHeading = headingElements[0];
-      for (let i = 0; i < headingElements.length; i++) {
-        const heading = headingElements[i];
-        const headingTop = heading.getBoundingClientRect().top + scrollY;
-        const nextHeading = headingElements[i + 1];
-        const nextHeadingTop = nextHeading
-          ? nextHeading.getBoundingClientRect().top + scrollY
-          : document.documentElement.scrollHeight;
-
-        // Check if viewport center is within this section
-        if (viewportCenter >= headingTop && viewportCenter < nextHeadingTop) {
-          activeHeading = heading;
-          break;
-        }
-      }
+      const readingLine = parseFloat(getComputedStyle(headingElements[0]).scrollMarginTop) + 16;
+      const activeHeading =
+        headingElements.findLast((heading) => heading.getBoundingClientRect().top <= readingLine) ?? headingElements[0];
 
       setActiveId(activeHeading.id);
     };
@@ -97,6 +96,10 @@ export default function TableOfContents() {
     // Throttled scroll handler
     let ticking = false;
     const onScroll = () => {
+      if (isClickScrolling.current) {
+        endClickScrollWhenIdle();
+        return;
+      }
       if (!ticking) {
         requestAnimationFrame(() => {
           updateActiveHeading();
@@ -112,10 +115,41 @@ export default function TableOfContents() {
   }, []);
 
   useEffect(() => {
-    const link = railRef.current?.querySelector<HTMLElement>('.toc-link.active');
-    if (!link) return;
-    setIndicator((prev) => ({ top: link.offsetTop, height: link.offsetHeight, animate: prev !== null }));
-  }, [activeId, items]);
+    const rail = railRef.current;
+    if (!rail) return;
+    const measure = () =>
+      setRows(
+        Array.from(rail.querySelectorAll<HTMLElement>('.toc-item'), (item, i) => ({
+          top: item.offsetTop,
+          height: item.offsetHeight,
+          x: items[i]?.level === 3 ? LEVEL_3_X : LEVEL_2_X,
+        })),
+      );
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(rail);
+    return () => observer.disconnect();
+  }, [items]);
+
+  useEffect(() => {
+    const row = railRef.current?.querySelector<HTMLElement>('.toc-item:has(.toc-link.active)');
+    if (!row) return;
+    setIndicator((prev) => ({ top: row.offsetTop, height: row.offsetHeight, animate: prev !== null }));
+
+    const toc = tocRef.current;
+    if (!toc) return;
+    const rowTop = row.getBoundingClientRect().top - toc.getBoundingClientRect().top;
+    if (rowTop < 0 || rowTop + row.offsetHeight > toc.clientHeight) {
+      toc.scrollBy({ top: rowTop - toc.clientHeight / 2, behavior: 'smooth' });
+    }
+  }, [activeId, rows]);
+
+  const endClickScrollWhenIdle = () => {
+    clearTimeout(clickScrollIdle.current);
+    clickScrollIdle.current = setTimeout(() => {
+      isClickScrolling.current = false;
+    }, 150);
+  };
 
   const handleClick = (e: React.MouseEvent, id: string) => {
     e.preventDefault();
@@ -129,25 +163,34 @@ export default function TableOfContents() {
       element.scrollIntoView({ behavior: 'smooth' });
       window.history.pushState({}, '', `#${id}`);
 
-      // Re-enable scroll tracking after animation completes
-      setTimeout(() => {
-        isClickScrolling.current = false;
-      }, 1000);
+      endClickScrollWhenIdle();
     }
   };
 
   if (items.length === 0) return null;
 
+  const path = railPath(rows);
+  const railHeight = rows.length > 0 ? rows[rows.length - 1].top + rows[rows.length - 1].height : 0;
+
   return (
-    <nav className="toc">
+    <nav className="toc" ref={tocRef}>
       <h4 className="toc-title">On this page</h4>
       <div className="toc-rail" ref={railRef}>
-        {indicator && (
-          <span
-            className={`toc-indicator ${indicator.animate ? 'animate' : ''}`}
-            style={{ transform: `translateY(${indicator.top}px)`, height: indicator.height }}
+        {rows.length > 0 && (
+          <svg className="toc-line" width={LEVEL_3_X + 1} height={railHeight} aria-hidden="true">
+            <path d={path} />
+          </svg>
+        )}
+        {rows.length > 0 && indicator && (
+          <svg
+            className={`toc-line toc-indicator ${indicator.animate ? 'animate' : ''}`}
+            width={LEVEL_3_X + 1}
+            height={railHeight}
+            style={{ clipPath: `inset(${indicator.top}px -2px ${railHeight - indicator.top - indicator.height}px -2px)` }}
             aria-hidden="true"
-          />
+          >
+            <path d={path} />
+          </svg>
         )}
         <ul className="toc-list">
           {items.map((item) => (
@@ -170,7 +213,12 @@ export default function TableOfContents() {
           top: calc(var(--header-height) + var(--space-8));
           max-height: calc(100vh - var(--header-height) - var(--space-16));
           overflow-y: auto;
+          scrollbar-width: none;
           padding-right: var(--space-4);
+        }
+
+        .toc::-webkit-scrollbar {
+          display: none;
         }
 
         .toc-title {
@@ -178,25 +226,32 @@ export default function TableOfContents() {
           font-weight: 500;
           color: var(--text-muted);
           margin: 0 0 var(--space-2);
+          opacity: 0.5;
         }
 
         .toc-rail {
           position: relative;
         }
 
-        .toc-indicator {
+        .toc-line {
           position: absolute;
           top: 0;
           left: 0;
-          z-index: 1;
-          width: 2px;
-          border-radius: var(--radius-full);
-          background-color: var(--accent);
+          overflow: visible;
           pointer-events: none;
+          fill: none;
+          stroke: var(--border);
+          stroke-width: 1;
+        }
+
+        .toc-indicator {
+          z-index: 1;
+          stroke: var(--accent);
+          stroke-width: 2;
         }
 
         .toc-indicator.animate {
-          transition: transform 300ms cubic-bezier(0.22, 1, 0.36, 1), height 300ms cubic-bezier(0.22, 1, 0.36, 1);
+          transition: clip-path 300ms cubic-bezier(0.22, 1, 0.36, 1);
         }
 
         @media (prefers-reduced-motion: reduce) {
@@ -218,15 +273,14 @@ export default function TableOfContents() {
         }
 
         .toc-item.level-3 .toc-link {
-          padding-left: var(--space-6);
+          padding-left: var(--space-8);
         }
 
         .toc-link {
           display: block;
-          padding: 0.125rem var(--space-3);
+          padding: 0.125rem var(--space-3) 0.125rem var(--space-5);
           font-size: 0.8125rem;
           color: var(--text-muted);
-          border-left: 1px solid var(--border);
           transition: color var(--transition-fast);
           line-height: 1.4;
         }
@@ -237,16 +291,6 @@ export default function TableOfContents() {
 
         .toc-link.active {
           color: var(--text-primary);
-        }
-
-        /* Scrollbar */
-        .toc::-webkit-scrollbar {
-          width: 4px;
-        }
-
-        .toc::-webkit-scrollbar-thumb {
-          background: var(--border-hover);
-          border-radius: var(--radius-full);
         }
       `}</style>
     </nav>
