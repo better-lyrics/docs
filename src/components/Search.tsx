@@ -169,15 +169,19 @@ export default function Search() {
             strokeLinecap="round"
           />
         </svg>
-        <span>Search docs...</span>
-        <kbd
-          style={{
-            marginRight: "-0.25rem",
-          }}
-        >
-          {isMac ? "⌘" : "Ctrl"}
-        </kbd>
-        <kbd>K</kbd>
+        <span className="search-trigger-label">Search docs...</span>
+        <span className="kbd-group">
+          <kbd>
+            {isMac ? (
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-label="Command">
+                <path d="M7 9a2 2 0 1 1 2 -2v10a2 2 0 1 1 -2 -2h10a2 2 0 1 1 -2 2v-10a2 2 0 1 1 2 2h-10" />
+              </svg>
+            ) : (
+              "Ctrl"
+            )}
+          </kbd>
+          <kbd>K</kbd>
+        </span>
       </button>
 
       {/* Search Modal */}
@@ -256,8 +260,11 @@ export default function Search() {
               {!query.trim() && (
                 <div className="search-hints">
                   <div className="search-hint">
-                    <kbd>↑</kbd>
-                    <kbd>↓</kbd> to navigate
+                    <span className="kbd-group">
+                      <kbd>↑</kbd>
+                      <kbd>↓</kbd>
+                    </span>
+                    to navigate
                   </div>
                   <div className="search-hint">
                     <kbd>↵</kbd> to select
@@ -278,12 +285,12 @@ export default function Search() {
           align-items: center;
           gap: var(--space-2);
           width: 100%;
-          padding: var(--space-2) var(--space-3);
-          background-color: var(--bg-secondary);
+          padding: 0.375rem var(--space-3);
+          background-color: var(--surface-panel);
           border: 1px solid var(--border);
-          border-radius: var(--radius-md);
+          border-radius: var(--radius-lg);
           color: var(--text-muted);
-          font-size: 0.875rem;
+          font-size: 0.8125rem;
           cursor: pointer;
           transition: all var(--transition-fast);
         }
@@ -293,22 +300,13 @@ export default function Search() {
           color: var(--text-secondary);
         }
 
-        .search-trigger span {
+        .search-trigger-label {
           flex: 1;
           text-align: left;
         }
 
-        .search-trigger kbd {
-          font-family: var(--font-mono);
-          font-size: 0.6875rem;
-          padding: var(--space-1) var(--space-2);
-          background-color: var(--bg-tertiary);
-          border-radius: var(--radius-sm);
-          color: var(--text-muted);
-        }
-
         @media (max-width: 768px) {
-          .search-trigger kbd,
+          .search-trigger .kbd-group,
           .search-input-wrapper kbd,
           .search-hints {
             display: none;
@@ -318,7 +316,7 @@ export default function Search() {
         .search-modal-backdrop {
           position: fixed;
           inset: 0;
-          background-color: rgba(0, 0, 0, 0.8);
+          background-color: rgba(0, 0, 0, 0.6);
           display: flex;
           align-items: flex-start;
           justify-content: center;
@@ -377,18 +375,12 @@ export default function Search() {
         }
 
         .search-input-wrapper kbd {
-          font-family: var(--font-mono);
-          font-size: 0.6875rem;
-          padding: var(--space-1) var(--space-2);
-          background-color: var(--bg-tertiary);
-          border-radius: var(--radius-sm);
-          color: var(--text-muted);
           cursor: pointer;
-          transition: all var(--transition-fast);
+          transition: color var(--transition-fast);
         }
 
         .search-input-wrapper kbd:hover {
-          color: var(--text-secondary);
+          color: var(--text-primary);
         }
 
         .search-results {
@@ -400,14 +392,12 @@ export default function Search() {
           display: block;
           padding: var(--space-3) var(--space-4);
           text-decoration: none;
-          border-left: 2px solid transparent;
-          transition: all var(--transition-fast);
+          transition: background-color var(--transition-fast);
         }
 
         .search-result:hover,
         .search-result.selected {
-          background-color: var(--bg-primary);
-          border-left-color: var(--accent);
+          background-color: var(--bg-tertiary);
         }
 
         .search-result-title {
@@ -430,8 +420,8 @@ export default function Search() {
         }
 
         .search-result-excerpt mark {
-          background-color: rgba(242, 12, 50, 0.2);
-          color: var(--accent);
+          background: none;
+          color: var(--text-primary);
         }
 
         .search-loading,
@@ -454,15 +444,6 @@ export default function Search() {
           align-items: center;
           gap: var(--space-1);
           font-size: 0.75rem;
-          color: var(--text-muted);
-        }
-
-        .search-hint kbd {
-          font-family: var(--font-mono);
-          font-size: 0.625rem;
-          padding: 2px 6px;
-          background-color: var(--bg-tertiary);
-          border-radius: var(--radius-sm);
           color: var(--text-muted);
         }
       `}</style>

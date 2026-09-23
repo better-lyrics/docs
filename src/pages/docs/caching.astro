@@ -1,24 +1,25 @@
 ---
+import CodeTabs from '../../components/CodeTabs.astro';
 import DocsLayout from '../../layouts/DocsLayout.astro';
 ---
 
 <DocsLayout title="Caching">
   <p>
-    The API uses aggressive caching to minimize upstream requests and provide fast responses.
-    Understanding how caching works helps you optimize your integration and interpret response headers.
+    The API caches heavily, which keeps upstream requests down and responses fast.
+    Knowing how the cache works helps you tune your integration and read the response headers.
   </p>
 
   <h2>Cache types</h2>
 
   <h3>Positive cache</h3>
   <p>
-    When lyrics are found, they are cached indefinitely until manually cleared.
+    Lyrics that are found stay cached until someone clears them manually.
     Positive cache entries include the TTML data, track duration, and match score.
   </p>
 
   <h3>Negative cache</h3>
   <p>
-    When lyrics are <em>not</em> found, this result is also cached to avoid repeated lookups.
+    When lyrics are <em>not</em> found, that result is cached too, so the API does not repeat the lookup.
     Negative cache entries expire after 7 days by default.
   </p>
   <p>
@@ -27,20 +28,21 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
   </p>
 
   <h2>Cache key format</h2>
-  <p>Cache keys are normalized for consistent lookups:</p>
-  <pre><code class="language-bash">{`ttml_lyrics:{song} {artist} [{album}] [{duration}s]`}</code></pre>
+  <p><code>/getLyrics</code> normalizes cache keys so equivalent queries share an entry:</p>
+  <pre><code class="language-bash">{`ttml_lyrics:{song} {artist} {album} {duration}s`}</code></pre>
   <ul>
     <li>All text is converted to lowercase</li>
     <li>Leading/trailing whitespace is trimmed</li>
-    <li>Album and duration are optional but improve cache hit rates</li>
+    <li>Album and duration are left out when they are not sent. They are optional but improve cache hit rates</li>
+    <li><code>/getLyrics</code> also accepts a cached entry whose duration differs by a small amount. The provider-specific endpoints need an exact match</li>
   </ul>
   <p>
     For example, searching for "Shape of You" by "Ed Sheeran" and "shape of you" by "ed sheeran"
-    will hit the same cache entry.
+    hit the same cache entry.
   </p>
 
   <h2>Cache status header</h2>
-  <p>Every response includes an <code>X-Cache-Status</code> header:</p>
+  <p>Responses from the lyrics endpoints include an <code>X-Cache-Status</code> header:</p>
   <table>
     <thead>
       <tr>
@@ -55,7 +57,7 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
       </tr>
       <tr>
         <td><code>MISS</code></td>
-        <td>Lyrics fetched fresh and now cached</td>
+        <td>Not in the cache. The lyrics were fetched fresh and cached, or the request failed</td>
       </tr>
       <tr>
         <td><code>NEGATIVE_HIT</code></td>
@@ -63,19 +65,19 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
       </tr>
       <tr>
         <td><code>STALE</code></td>
-        <td>Backend failed, serving older cached version as fallback</td>
+        <td>Backend failed, serving older cached version as fallback. Only on <code>/getLyrics</code></td>
       </tr>
     </tbody>
   </table>
 
-  <h2>Duration parameter importance</h2>
+  <h2>Why duration matters</h2>
   <p>
-    The <code>duration</code> parameter significantly improves cache hit rates and match accuracy:
+    The <code>duration</code> parameter improves both cache hit rates and match accuracy:
   </p>
   <ul>
     <li>Helps distinguish between different versions of the same song (radio edit vs album version)</li>
     <li>Improves matching when song/artist names have variations</li>
-    <li>Creates more specific cache keys, reducing false positives</li>
+    <li>Makes cache keys more specific, so there are fewer false positives</li>
   </ul>
   <p>
     If your application has access to track duration (e.g., from a music player),
@@ -84,24 +86,65 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
 
   <h2>Cache fallback behavior</h2>
   <p>
-    When the upstream provider fails, the API attempts to serve stale cached data:
+    When the upstream fetch for <code>/getLyrics</code> fails, the API tries to serve stale cached data:
   </p>
   <ol>
     <li>Primary cache key lookup fails (fresh fetch attempted)</li>
     <li>Upstream provider returns error</li>
-    <li>API checks for any cached version with similar parameters</li>
+    <li>If an album was sent, the API checks the cache for the same query without the album</li>
     <li>If found, serves stale cache with <code>X-Cache-Status: STALE</code></li>
     <li>If not found, returns the original error</li>
   </ol>
 
   <h2>Revalidation</h2>
   <p>
-    To force a cache refresh, use the <code>/revalidate</code> endpoint (requires API key):
+    To force a cache refresh, use the <a href="/reference/revalidate"><code>/revalidate</code></a> endpoint (requires API key).
+    It refreshes only entries that already exist, and only the default TTML entry that <code>/getLyrics</code> serves:
   </p>
-  <pre><code class="language-bash">curl -H "X-API-Key: your-api-key" \
-  "https://lyrics-api.boidu.dev/revalidate?s=Song&a=Artist"</code></pre>
+  <CodeTabs tabs={[
+    { language: 'curl', code: `curl -H "X-API-Key: your-api-key" \\
+  "https://api.betterlyrics.org/revalidate?s=Song&a=Artist"` },
+    { language: 'javascript', code: `const res = await fetch("https://api.betterlyrics.org/revalidate?s=Song&a=Artist", {
+  headers: { "X-API-Key": "your-api-key" },
+});
+const data = await res.json();` },
+    { language: 'python', code: `import requests
+
+res = requests.get(
+    "https://api.betterlyrics.org/revalidate?s=Song&a=Artist",
+    headers={"X-API-Key": "your-api-key"},
+)
+data = res.json()` },
+    { language: 'go', code: `package main
+
+import (
+	"fmt"
+	"io"
+	"net/http"
+)
+
+func main() {
+	req, err := http.NewRequest(http.MethodGet, "https://api.betterlyrics.org/revalidate?s=Song&a=Artist", nil)
+	if err != nil {
+		panic(err)
+	}
+	req.Header.Set("X-API-Key", "your-api-key")
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		panic(err)
+	}
+	defer res.Body.Close()
+
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(string(body))
+}` },
+  ]} />
   <p>
-    This is useful when:
+    Use it when:
   </p>
   <ul>
     <li>You know lyrics have been corrected at the source</li>
@@ -111,11 +154,11 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
 
   <h2>Client-side caching</h2>
   <p>
-    To reduce API calls, implement client-side caching:
+    Cache on the client too, to cut down on API calls:
   </p>
   <ul>
     <li>Cache successful responses locally for the session or longer</li>
     <li>Use the song+artist+duration as your local cache key</li>
-    <li>Respect <code>NEGATIVE_HIT</code> - don't retry immediately for songs without lyrics</li>
+    <li>Respect <code>NEGATIVE_HIT</code>: don't retry songs without lyrics right away</li>
   </ul>
 </DocsLayout>

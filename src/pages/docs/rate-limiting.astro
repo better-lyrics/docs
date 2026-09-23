@@ -1,11 +1,12 @@
 ---
+import CodeTabs from '../../components/CodeTabs.astro';
 import DocsLayout from '../../layouts/DocsLayout.astro';
 ---
 
 <DocsLayout title="Rate limiting">
   <p>
-    The API implements a <strong>two-tier rate limiting system</strong> that provides graceful degradation under load.
-    When the normal rate limit is exceeded, cached responses can still be served at a higher rate.
+    The API uses <strong>two-tier rate limiting</strong>. When you go over the normal limit,
+    cached responses still come through, up to a second, higher limit.
   </p>
 
   <h2>How it works</h2>
@@ -15,10 +16,6 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
         <span class="tier-badge normal">Tier 1: Normal</span>
       </div>
       <p>Standard rate limit for all requests. Can fetch fresh lyrics or serve from cache.</p>
-      <ul>
-        <li>Default: 2 requests/second</li>
-        <li>Burst: 5 requests</li>
-      </ul>
     </div>
     <div class="tier-arrow">When exceeded</div>
     <div class="tier">
@@ -26,10 +23,6 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
         <span class="tier-badge cached">Tier 2: Cached</span>
       </div>
       <p>Higher rate limit, but only serves cached responses. Fresh fetches return 429.</p>
-      <ul>
-        <li>Default: 10 requests/second</li>
-        <li>Burst: 20 requests</li>
-      </ul>
     </div>
     <div class="tier-arrow">When exceeded</div>
     <div class="tier">
@@ -39,35 +32,72 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
       <p>All requests return 429 Too Many Requests.</p>
     </div>
   </div>
+  <p>
+    Limits are per IP address. The limits can change, so do not hardcode them.
+    Read <code>X-RateLimit-Limit</code> and <code>X-RateLimit-Remaining</code> on each response instead.
+  </p>
 
-  <h2>Rate limit headers</h2>
-  <p>Every response includes rate limit information:</p>
+  <h2>Response headers</h2>
+  <p>The API reports rate limit, cache and authentication state in these headers:</p>
   <table>
     <thead>
       <tr>
         <th>Header</th>
-        <th>Description</th>
+        <th>Values</th>
+        <th>When it is sent</th>
       </tr>
     </thead>
     <tbody>
       <tr>
         <td><code>X-RateLimit-Limit</code></td>
-        <td>Maximum requests allowed in the current tier</td>
+        <td>Burst size of the current tier. On <code>exceeded</code> it is the burst size of the cached tier.</td>
+        <td>Every request without a valid API key</td>
       </tr>
       <tr>
         <td><code>X-RateLimit-Remaining</code></td>
-        <td>Requests remaining before hitting the limit</td>
+        <td>Requests left in the current tier, <code>0</code> when both tiers are exceeded</td>
+        <td>Every request without a valid API key</td>
       </tr>
       <tr>
         <td><code>X-RateLimit-Type</code></td>
-        <td>Current tier: <code>normal</code>, <code>cached</code>, <code>exceeded</code>, or <code>bypass</code></td>
+        <td><code>normal</code>, <code>cached</code>, <code>exceeded</code>, or <code>bypass</code></td>
+        <td>Every request without a valid API key. With a valid API key, <code>bypass</code> is sent on JSON responses from the lyrics endpoints, <code>/revalidate</code> and the <code>/cache/*</code> endpoints</td>
+      </tr>
+      <tr>
+        <td><code>X-RateLimit-Bypass</code></td>
+        <td><code>true</code></td>
+        <td>Requests with a valid <code>X-API-Key</code> header</td>
       </tr>
       <tr>
         <td><code>Retry-After</code></td>
-        <td>Seconds to wait before retrying (only when rate limited)</td>
+        <td><code>1</code> when both tiers are exceeded, <code>60</code> when the cached tier has no cache entry for the query</td>
+        <td>Only on <code>429</code> responses</td>
+      </tr>
+      <tr>
+        <td><code>X-Cache-Status</code></td>
+        <td><code>HIT</code>, <code>MISS</code>, <code>NEGATIVE_HIT</code>, or <code>STALE</code> (<code>STALE</code> only on <code>/getLyrics</code>)</td>
+        <td>Lyrics endpoints: <code>/getLyrics</code> and the provider-specific endpoints. See <a href="/docs/caching">Caching</a></td>
+      </tr>
+      <tr>
+        <td><code>X-Provider</code></td>
+        <td><code>ttml</code>, <code>kugou</code>, or <code>qq</code></td>
+        <td>Provider-specific endpoints only, for example <code>/kugou/getLyrics</code></td>
+      </tr>
+      <tr>
+        <td><code>X-Auth-Mode</code></td>
+        <td><code>authenticated</code>, <code>invalid</code>, or <code>cache</code></td>
+        <td><code>/getLyrics</code>, <code>/ttml/getLyrics</code> and <code>/revalidate</code>, when the API requires a key for uncached queries. See <a href="/docs/authentication">Authentication</a></td>
       </tr>
     </tbody>
   </table>
+  <div class="callout" role="note">
+    <div class="callout-body">
+      <p>
+        Browsers cannot read these headers from cross-origin JavaScript. The API does not expose them
+        through CORS on purpose, so they are meant for server-side callers and tools like curl.
+      </p>
+    </div>
+  </div>
 
   <h2>Rate limit types</h2>
 
@@ -76,25 +106,67 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
 
   <h3><code>cached</code></h3>
   <p>
-    Normal tier exceeded. Request will only be served if data is cached.
-    If the requested lyrics are not cached, returns 429.
+    Normal tier exceeded. The request is served only if the lyrics are cached.
+    Otherwise it returns 429.
   </p>
 
   <h3><code>exceeded</code></h3>
   <p>Both tiers exceeded. All requests return 429 Too Many Requests.</p>
 
   <h3><code>bypass</code></h3>
-  <p>Request has a valid API key, rate limits are bypassed entirely.</p>
+  <p>The request has a valid API key, so rate limits do not apply.</p>
 
   <h2>API key bypass</h2>
   <p>
     Requests with a valid <code>X-API-Key</code> header bypass all rate limits.
     This is useful for production applications that need guaranteed access.
   </p>
-  <pre><code class="language-bash">curl -H "X-API-Key: your-api-key" \
-  "https://lyrics-api.boidu.dev/getLyrics?s=Song&a=Artist"</code></pre>
+  <CodeTabs tabs={[
+    { language: 'curl', code: `curl -H "X-API-Key: your-api-key" \\
+  "https://api.betterlyrics.org/getLyrics?s=Song&a=Artist"` },
+    { language: 'javascript', code: `const res = await fetch("https://api.betterlyrics.org/getLyrics?s=Song&a=Artist", {
+  headers: { "X-API-Key": "your-api-key" },
+});
+const data = await res.json();` },
+    { language: 'python', code: `import requests
+
+res = requests.get(
+    "https://api.betterlyrics.org/getLyrics?s=Song&a=Artist",
+    headers={"X-API-Key": "your-api-key"},
+)
+data = res.json()` },
+    { language: 'go', code: `package main
+
+import (
+	"fmt"
+	"io"
+	"net/http"
+)
+
+func main() {
+	req, err := http.NewRequest(http.MethodGet, "https://api.betterlyrics.org/getLyrics?s=Song&a=Artist", nil)
+	if err != nil {
+		panic(err)
+	}
+	req.Header.Set("X-API-Key", "your-api-key")
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		panic(err)
+	}
+	defer res.Body.Close()
+
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(string(body))
+}` },
+  ]} />
   <p>
-    When bypass is active, the response includes:
+    When bypass is active, every response includes <code>X-RateLimit-Bypass: true</code>, and has no
+    <code>X-RateLimit-Limit</code> or <code>X-RateLimit-Remaining</code>. The lyrics endpoints,
+    <code>/revalidate</code> and the <code>/cache/*</code> JSON responses also include <code>X-RateLimit-Type: bypass</code>:
   </p>
   <pre><code class="language-bash">X-RateLimit-Bypass: true
 X-RateLimit-Type: bypass</code></pre>
@@ -103,17 +175,28 @@ X-RateLimit-Type: bypass</code></pre>
   <p>When you receive a 429 response:</p>
   <ol>
     <li>Check the <code>Retry-After</code> header for when to retry</li>
-    <li>Check <code>X-RateLimit-Type</code> to understand which tier was exceeded</li>
-    <li>If <code>cached</code>, the lyrics might not be in cache yet - try a different song or wait</li>
-    <li>Implement exponential backoff for retries</li>
+    <li>Check <code>X-RateLimit-Type</code> to see which tier was exceeded</li>
+    <li>If <code>cached</code>, the lyrics are not in the cache yet, so wait before you retry</li>
+    <li>Use exponential backoff for retries</li>
   </ol>
 
-  <h2>Rate limit response</h2>
+  <h2>Rate limit responses</h2>
+  <p>
+    When both tiers are exhausted, any endpoint returns <code>429 Too Many Requests</code> with
+    <code>Content-Type: text/plain</code>, <code>Retry-After: 1</code> and <code>X-RateLimit-Type: exceeded</code>:
+  </p>
+  <pre><code>Too Many Requests</code></pre>
+  <p>
+    When the cached tier serves a lyrics request that is not cached, the response is <code>429</code> with a JSON body,
+    <code>Retry-After: 60</code> and <code>X-RateLimit-Type: cached</code>:
+  </p>
   <pre><code class="language-json">{`{
   "error": "Rate limit exceeded. This request requires cached data, but no cache is available for this query.",
   "message": "Please try again later or reduce your request rate."
 }`}</code></pre>
-  <p>Status: <code>429 Too Many Requests</code></p>
+  <p>
+    The provider-specific endpoints return <code>{`{"error": "Rate limit exceeded. No cached data available.", "provider": "..."}`}</code> in this case.
+  </p>
 </DocsLayout>
 
 <style>

@@ -1,7 +1,10 @@
 {
   "name": "better-lyrics-api-docs",
   "compatibility_date": "2026-01-05",
+  "main": "./src/worker.ts",
   "assets": {
-    "directory": "./dist"
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "run_worker_first": ["/*", "!/*.*"]
   }
 }

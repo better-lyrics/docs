@@ -1,283 +1,114 @@
 ---
-import BaseLayout from '../layouts/BaseLayout.astro';
-import Header from '../components/Header.astro';
-import Footer from '../components/Footer.astro';
-import HeaderMobileNav from '../components/HeaderMobileNav';
-
-const currentPath = Astro.url.pathname.replace(/\/$/, '') || '/';
+import CodeTabs from '../components/CodeTabs.astro';
+import DocsLayout from '../layouts/DocsLayout.astro';
 ---
 
-<BaseLayout title="Home">
-  <Header />
-  <HeaderMobileNav client:load currentPath={currentPath} />
+<DocsLayout title="Introduction">
+  <p>
+    The Better Lyrics API serves syllable-synced lyrics for any song, for free.
+    It powers the <a href="https://better-lyrics.boidu.dev" target="_blank" rel="noopener noreferrer">Better Lyrics</a> browser extension,
+    and you can use it in your own apps too.
+  </p>
 
-  <main class="main">
-    <section class="hero">
-			<span class="hero-badge">
-				Free • Unlimited cached requests • Open source
-			</span>
-      <h1 class="hero-title">The API powering Better Lyrics</h1>
-      <p class="hero-description">
-        Fetch syllable-synced lyrics for any song, completely free.
-        Precise timing data, aggressive caching, and multiple provider support.
-      </p>
-      <div class="hero-actions">
-        <a href="/docs/introduction" class="btn btn-primary">Get started</a>
-        <a href="/playground" class="btn btn-secondary">Try the playground</a>
-      </div>
-    </section>
+  <h2>Base URL</h2>
+  <p>Send every request to:</p>
+  <pre><code class="language-bash">https://api.betterlyrics.org</code></pre>
 
-    <section class="example">
-      <h2 class="example-title">Quick example</h2>
-      <div class="code-block">
-        <div class="code-header">
-          <span class="code-lang">bash</span>
-          <button class="copy-btn" data-code="curl &quot;https://lyrics-api.boidu.dev/getLyrics?s=Shape%20of%20You&a=Ed%20Sheeran&quot;">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect x="5" y="5" width="9" height="9" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
-              <path d="M11 5V3.5C11 2.67157 10.3284 2 9.5 2H3.5C2.67157 2 2 2.67157 2 3.5V9.5C2 10.3284 2.67157 11 3.5 11H5" stroke="currentColor" stroke-width="1.5"/>
-            </svg>
-            Copy
-          </button>
-        </div>
-        <pre><code class="language-bash">curl "https://lyrics-api.boidu.dev/getLyrics?\
-  s=Shape%20of%20You&a=Ed%20Sheeran"</code></pre>
-      </div>
-    </section>
+  <h2>Quick start</h2>
+  <p>Fetch lyrics for a song with a single GET request:</p>
+  <CodeTabs tabs={[
+    { language: 'curl', code: `curl "https://api.betterlyrics.org/getLyrics?s=Shape%20of%20You&a=Ed%20Sheeran"` },
+    { language: 'javascript', code: `const res = await fetch("https://api.betterlyrics.org/getLyrics?s=Shape%20of%20You&a=Ed%20Sheeran");
+const { ttml } = await res.json();` },
+    { language: 'python', code: `import requests
 
-    <section class="docs-highlights">
-      <h2 class="section-title">Learn the API</h2>
-      <div class="docs-grid">
-        <a href="/docs/introduction" class="doc-card">
-          <span class="doc-label">Start here</span>
-          <h3>Getting started</h3>
-          <p>Quick introduction to the API, base URL, and your first request.</p>
-        </a>
-        <a href="/reference/get-lyrics" class="doc-card">
-          <span class="doc-label">Reference</span>
-          <h3>GET /getLyrics</h3>
-          <p>Main endpoint for fetching lyrics. Parameters, headers, and response format.</p>
-        </a>
-        <a href="/docs/response-format" class="doc-card">
-          <span class="doc-label">Concept</span>
-          <h3>Response format</h3>
-          <p>TTML format with syllable-level timing. Parse and display synchronized lyrics.</p>
-        </a>
-      </div>
-    </section>
-  </main>
+res = requests.get("https://api.betterlyrics.org/getLyrics?s=Shape%20of%20You&a=Ed%20Sheeran")
+ttml = res.json()["ttml"]` },
+    { language: 'go', code: `package main
 
-  <Footer />
-</BaseLayout>
+import (
+	"fmt"
+	"io"
+	"net/http"
+)
 
-<style>
-  .main {
-    min-height: calc(100vh - var(--header-height));
-    display: flex;
-    flex-direction: column;
-  }
+func main() {
+	res, err := http.Get("https://api.betterlyrics.org/getLyrics?s=Shape%20of%20You&a=Ed%20Sheeran")
+	if err != nil {
+		panic(err)
+	}
+	defer res.Body.Close()
 
-  .hero {
-    text-align: center;
-    padding: var(--space-16) var(--space-6);
-    max-width: 740px;
-    margin: 0 auto;
-  }
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(string(body))
+}` },
+  ]} />
 
-  .hero-badge {
-    display: inline-block;
-    font-size: 0.75rem;
-    font-weight: 600;
-    letter-spacing: 0.01em;
-    color: var(--success);
-    background-color: rgba(34, 197, 94, 0.1);
-    border: 1px solid rgba(34, 197, 94, 0.2);
-    padding: var(--space-1) var(--space-3);
-    border-radius: var(--radius-full);
-    margin-bottom: var(--space-4);
-  }
+  <h3>Parameters</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Parameter</th>
+        <th>Required</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>s</code>, <code>song</code>, or <code>songName</code></td>
+        <td>At least one of song or artist</td>
+        <td>The song title</td>
+      </tr>
+      <tr>
+        <td><code>a</code>, <code>artist</code>, or <code>artistName</code></td>
+        <td>At least one of song or artist</td>
+        <td>The artist name</td>
+      </tr>
+      <tr>
+        <td><code>al</code>, <code>album</code>, or <code>albumName</code></td>
+        <td>No</td>
+        <td>Album name (improves matching accuracy)</td>
+      </tr>
+      <tr>
+        <td><code>d</code> or <code>duration</code></td>
+        <td>No</td>
+        <td>Track duration in whole seconds (improves matching accuracy)</td>
+      </tr>
+    </tbody>
+  </table>
 
-  .hero-title {
-    font-size: 3rem;
-    font-weight: 700;
-    margin-bottom: var(--space-4);
-    background: linear-gradient(to bottom, var(--text-primary), var(--text-secondary));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
+  <h3>Response</h3>
+  <p>A successful response contains TTML (Timed Text Markup Language) with syllable-level timing:</p>
+  <pre><code class="language-json">{`{
+  "ttml": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\"?>..."
+}`}</code></pre>
 
-  .hero-description {
-    font-size: 1.25rem;
-    color: var(--text-secondary);
-    line-height: 1.6;
-    margin-bottom: var(--space-8);
-  }
+  <h2>Key features</h2>
+  <ul>
+    <li>Free to use. Cached responses need no API key, and most use cases have no usage limits</li>
+    <li>Syllable-level sync, with a start and end time for every syllable, for karaoke-style display</li>
+    <li>Several providers: TTML (default), Kugou and QQ, each suited to different uses</li>
+    <li>Heavy caching, so cache hits are free and need no API key</li>
+    <li>Two-tier rate limiting that keeps serving cached responses under load, even to rate-limited clients</li>
+    <li>A circuit breaker that protects the API from upstream failures</li>
+  </ul>
 
-  .hero-actions {
-    display: flex;
-    justify-content: center;
-    gap: var(--space-4);
-    flex-wrap: wrap;
-  }
+  <h2>Attribution</h2>
+  <p>
+    If your project uses this API, we'd appreciate a link to
+    <a href="https://better-lyrics.boidu.dev" target="_blank" rel="noopener noreferrer">Better Lyrics</a>.
+    It helps other people find the project and keeps development going.
+  </p>
 
-  .example {
-    max-width: 680px;
-    margin: 0 auto;
-    padding: 0 var(--space-6) var(--space-12);
-    width: 100%;
-  }
+  <h2>Next steps</h2>
+  <ul>
+    <li><a href="/docs/authentication">Authentication</a>: API keys and when you need one</li>
+    <li><a href="/docs/rate-limiting">Rate limiting</a>: how the two tiers work</li>
+    <li><a href="/docs/response-format">Response format</a>: parse and use the TTML response</li>
+    <li><a href="/playground">Playground</a>: try the API in your browser</li>
+  </ul>
+</DocsLayout>
 
-  .example-title {
-    font-size: 1rem;
-    font-weight: 500;
-    color: var(--text-muted);
-    margin-bottom: var(--space-4);
-  }
-
-  .code-block {
-    background-color: var(--bg-secondary);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    overflow: hidden;
-  }
-
-  .code-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: var(--space-3) var(--space-4);
-    border-bottom: 1px solid var(--border);
-    background-color: var(--bg-tertiary);
-  }
-
-  .code-lang {
-    font-size: 0.75rem;
-    font-weight: 500;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  .copy-btn {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    padding: var(--space-1) var(--space-2);
-    border-radius: var(--radius-sm);
-    background: transparent;
-    border: none;
-    color: var(--text-muted);
-    font-size: 0.75rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all var(--transition-fast);
-  }
-
-  .copy-btn:hover {
-    color: var(--text-primary);
-    background-color: var(--bg-secondary);
-  }
-
-  .code-block pre {
-    margin: 0;
-    padding: var(--space-4);
-    background: transparent;
-    border: none;
-    border-radius: 0;
-  }
-
-  .code-block code {
-    color: var(--text-secondary);
-  }
-
-  .docs-highlights {
-    background-color: var(--bg-secondary);
-    border-top: 1px solid var(--border);
-    padding: var(--space-16) var(--space-6);
-  }
-
-  .section-title {
-    text-align: center;
-    font-size: 1.75rem;
-    margin-bottom: var(--space-10);
-  }
-
-  .docs-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: var(--space-6);
-    max-width: 1000px;
-    margin: 0 auto;
-  }
-
-  .doc-card {
-    display: block;
-    padding: var(--space-6);
-    background-color: var(--bg-primary);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-xl);
-    text-decoration: none;
-    transition: all var(--transition-fast);
-  }
-
-  .doc-card:hover {
-    border-color: var(--border-hover);
-    transform: translateY(-2px);
-  }
-
-  .doc-label {
-    display: inline-block;
-    font-size: 0.6875rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--text-muted);
-    margin-bottom: var(--space-2);
-  }
-
-  .doc-card h3 {
-    font-size: 1.0625rem;
-    font-weight: 600;
-    margin-bottom: var(--space-2);
-    color: var(--text-primary);
-  }
-
-  .doc-card p {
-    font-size: 0.9375rem;
-    color: var(--text-secondary);
-    margin: 0;
-    line-height: 1.5;
-  }
-
-  @media (max-width: 640px) {
-    .hero-title {
-      font-size: 2rem;
-    }
-
-    .hero-description {
-      font-size: 1.0625rem;
-    }
-
-    .hero-actions {
-      flex-direction: column;
-      align-items: stretch;
-    }
-  }
-</style>
-
-<script>
-  document.querySelectorAll('.copy-btn').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const code = btn.getAttribute('data-code');
-      if (code) {
-        await navigator.clipboard.writeText(code);
-        const originalText = btn.innerHTML;
-        btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 8L6.5 11.5L13 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Copied`;
-        setTimeout(() => {
-          btn.innerHTML = originalText;
-        }, 2000);
-      }
-    });
-  });
-</script>

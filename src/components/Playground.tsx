@@ -1,16 +1,12 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import Timeline from './Timeline';
 import CodeExamples from './CodeExamples';
+import LyricsPreview from './LyricsPreview';
+import BraccatoExample from './BraccatoExample';
+import SegmentedControl from './SegmentedControl';
+import { TextMorph } from 'torph/react';
+import { API_BASE, PROVIDER_ENDPOINTS, type Provider } from '../api';
 
-declare global {
-  interface Window {
-    Prism?: {
-      highlightElement: (el: Element) => void;
-    };
-  }
-}
-
-const API_BASE = 'https://lyrics-api.boidu.dev';
 
 interface ApiResponse {
   ttml?: string;
@@ -29,16 +25,40 @@ interface ResponseData {
   time: number;
 }
 
-type Provider = 'ttml' | 'kugou' | 'legacy';
+type OutputTab = 'preview' | 'timeline' | 'response' | 'code';
 
-const PROVIDER_ENDPOINTS: Record<Provider, string> = {
-  ttml: '/getLyrics',
-  kugou: '/kugou/getLyrics',
-  legacy: '/legacy/getLyrics',
-};
+type BodyView = 'raw' | 'parsed' | 'content';
 
-function getInitialParams() {
-  if (typeof window === 'undefined') return { song: '', artist: '', album: '', duration: '', provider: 'ttml' as Provider };
+interface Query {
+  song: string;
+  artist: string;
+  album: string;
+  duration: string;
+  provider: Provider;
+}
+
+const PROVIDERS = [
+  { id: 'ttml', label: 'TTML', desc: 'Syllable-level' },
+  { id: 'qq', label: 'QQ', desc: 'Word-level' },
+  { id: 'kugou', label: 'Kugou', desc: 'Line-level' },
+] as const;
+
+const PRESETS: Query[] = [
+  { song: 'SICKO MODE', artist: 'Travis Scott', album: 'ASTROWORLD', duration: '313', provider: 'ttml' },
+  { song: 'APT.', artist: 'ROSÉ, Bruno Mars', album: 'APT.', duration: '170', provider: 'ttml' },
+  { song: 'Fair Trade', artist: 'Drake', album: 'Certified Lover Boy', duration: '291', provider: 'ttml' },
+];
+
+function buildApiUrl(query: Query): string {
+  const params = new URLSearchParams();
+  if (query.song) params.set('s', query.song);
+  if (query.artist) params.set('a', query.artist);
+  if (query.album) params.set('al', query.album);
+  if (query.duration) params.set('d', query.duration);
+  return `${API_BASE}${PROVIDER_ENDPOINTS[query.provider]}?${params.toString()}`;
+}
+
+function getInitialQuery(): Query {
   const params = new URLSearchParams(window.location.search);
   const providerParam = params.get('provider');
   return {
@@ -46,23 +66,35 @@ function getInitialParams() {
     artist: params.get('a') || params.get('artist') || '',
     album: params.get('al') || params.get('album') || '',
     duration: params.get('d') || params.get('duration') || '',
-    provider: (providerParam === 'kugou' || providerParam === 'legacy' ? providerParam : 'ttml') as Provider,
+    provider: providerParam === 'kugou' || providerParam === 'qq' ? providerParam : 'ttml',
   };
 }
 
+function useCopied(): [string | null, (key: string, text: string) => void] {
+  const [copied, setCopied] = useState<string | null>(null);
+  const copy = (key: string, text: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(key);
+      setTimeout(() => setCopied(null), 2000);
+    });
+  };
+  return [copied, copy];
+}
+
 export default function Playground() {
-  const initial = getInitialParams();
-  const [song, setSong] = useState(initial.song);
-  const [artist, setArtist] = useState(initial.artist);
-  const [album, setAlbum] = useState(initial.album);
-  const [duration, setDuration] = useState(initial.duration);
-  const [provider, setProvider] = useState<Provider>(initial.provider);
+  const [query, setQuery] = useState<Query>(getInitialQuery);
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState<ResponseData | null>(null);
-  const [viewMode, setViewMode] = useState<'raw' | 'parsed'>('raw');
+  const [viewMode, setViewMode] = useState<BodyView>('raw');
+  const [tab, setTab] = useState<OutputTab>('preview');
+  const [copied, copy] = useCopied();
   const codeRef = useRef<HTMLElement>(null);
 
-  // Update URL when state changes
+  const { song, artist, album, duration, provider } = query;
+  const update = (patch: Partial<Query>) => setQuery((q) => ({ ...q, ...patch }));
+  const hasQuery = Boolean(song || artist);
+  const apiUrl = buildApiUrl(query);
+
   useEffect(() => {
     const params = new URLSearchParams();
     if (song) params.set('s', song);
@@ -75,30 +107,20 @@ export default function Playground() {
     window.history.replaceState({}, '', newUrl);
   }, [song, artist, album, duration, provider]);
 
-  // Highlight code when response or viewMode changes
   useEffect(() => {
     if (codeRef.current && window.Prism) {
       window.Prism.highlightElement(codeRef.current);
     }
-  }, [response, viewMode]);
+  }, [response, viewMode, tab]);
 
-  const fetchLyrics = useCallback(async () => {
-    if (!song && !artist) return;
+  const runFetch = useCallback(async (target: Query) => {
+    if (!target.song && !target.artist) return;
 
     setLoading(true);
     const startTime = performance.now();
 
-    const params = new URLSearchParams();
-    if (song) params.set('s', song);
-    if (artist) params.set('a', artist);
-    if (album) params.set('al', album);
-    if (duration) params.set('d', duration);
-
-    const endpoint = PROVIDER_ENDPOINTS[provider];
-    const url = `${API_BASE}${endpoint}?${params.toString()}`;
-
     try {
-      const res = await fetch(url);
+      const res = await fetch(buildApiUrl(target));
       const endTime = performance.now();
 
       const headers: Record<string, string> = {};
@@ -117,6 +139,7 @@ export default function Playground() {
         body,
         time: Math.round(endTime - startTime),
       });
+      setTab(body.ttml || body.lyrics ? 'preview' : 'response');
     } catch (err) {
       setResponse({
         status: 0,
@@ -125,10 +148,16 @@ export default function Playground() {
         body: { error: err instanceof Error ? err.message : 'Unknown error' },
         time: Math.round(performance.now() - startTime),
       });
+      setTab('response');
     } finally {
       setLoading(false);
     }
-  }, [song, artist, album, duration, provider]);
+  }, []);
+
+  const applyPreset = (preset: Query) => {
+    setQuery(preset);
+    runFetch(preset);
+  };
 
   const getStatusColor = (status: number) => {
     if (status >= 200 && status < 300) return 'var(--success)';
@@ -136,8 +165,8 @@ export default function Playground() {
     return 'var(--error)';
   };
 
-  const formatBody = (body: ApiResponse) => {
-    if (viewMode === 'raw') {
+  const formatBody = (body: ApiResponse, view: BodyView) => {
+    if (view === 'raw') {
       return JSON.stringify(body, null, 2);
     }
 
@@ -203,68 +232,94 @@ export default function Playground() {
     }
   };
 
+  const lyricsContent = response?.body.ttml || response?.body.lyrics;
+  const outputTabs: { id: OutputTab; label: string }[] = [
+    ...(lyricsContent ? [{ id: 'preview' as const, label: 'Preview' }] : []),
+    ...(response?.body.ttml ? [{ id: 'timeline' as const, label: 'Timeline' }] : []),
+    { id: 'response', label: 'Response' },
+    { id: 'code', label: 'Code' },
+  ];
+  const activeTab = outputTabs.some((t) => t.id === tab) ? tab : 'response';
+
+  const bodyViews: { id: BodyView; label: string }[] = [
+    { id: 'raw', label: 'JSON' },
+    ...(response?.body.ttml ? [{ id: 'parsed' as const, label: 'Parsed' }] : []),
+    ...(lyricsContent ? [{ id: 'content' as const, label: 'Lyrics' }] : []),
+  ];
+  const activeBodyView = bodyViews.some((v) => v.id === viewMode) ? viewMode : 'raw';
+  const lyricsExtension = response?.body.ttml ? 'ttml' : response?.body.provider === 'qq' ? 'qrc' : 'lrc';
+  const bodyText = response ? (activeBodyView === 'content' && lyricsContent ? lyricsContent : formatBody(response.body, activeBodyView)) : '';
+  const bodyLanguage = activeBodyView === 'content' ? (lyricsExtension === 'lrc' ? 'none' : 'markup') : 'json';
+
+  const downloadBody = () => {
+    const extension = activeBodyView === 'content' ? lyricsExtension : 'json';
+    const name = [song, artist].filter(Boolean).join(' - ') || 'lyrics';
+    const url = URL.createObjectURL(new Blob([bodyText], { type: 'text/plain' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${name.replace(/[\\/:*?"<>|]/g, '')}${activeBodyView === 'parsed' ? '.parsed' : ''}.${extension}`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="playground">
-      <div className="playground-inputs">
+      <div className="presets">
+        <span className="presets-label">Try a preset</span>
+        <div className="presets-list">
+          {PRESETS.map((preset) => (
+            <button
+              key={preset.song}
+              type="button"
+              className="preset"
+              onClick={() => applyPreset(preset)}
+              disabled={loading}
+            >
+              {preset.song}
+              <span className="preset-artist">{preset.artist}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <form
+        className="playground-inputs"
+        onSubmit={(e) => {
+          e.preventDefault();
+          runFetch(query);
+        }}
+      >
         <div className="input-row">
           <div className="input-group">
             <label htmlFor="song">Song</label>
-            <input
-              id="song"
-              type="text"
-              value={song}
-              onChange={(e) => setSong(e.target.value)}
-              placeholder="Shape of You"
-            />
+            <input id="song" type="text" value={song} onChange={(e) => update({ song: e.target.value })} placeholder="No Idea" />
           </div>
           <div className="input-group">
             <label htmlFor="artist">Artist</label>
-            <input
-              id="artist"
-              type="text"
-              value={artist}
-              onChange={(e) => setArtist(e.target.value)}
-              placeholder="Ed Sheeran"
-            />
+            <input id="artist" type="text" value={artist} onChange={(e) => update({ artist: e.target.value })} placeholder="Don Toliver" />
           </div>
         </div>
 
         <div className="input-row">
           <div className="input-group">
             <label htmlFor="album">Album (optional)</label>
-            <input
-              id="album"
-              type="text"
-              value={album}
-              onChange={(e) => setAlbum(e.target.value)}
-              placeholder="÷ (Divide)"
-            />
+            <input id="album" type="text" value={album} onChange={(e) => update({ album: e.target.value })} placeholder="Heaven Or Hell" />
           </div>
           <div className="input-group">
             <label htmlFor="duration">Duration in seconds (optional)</label>
-            <input
-              id="duration"
-              type="number"
-              value={duration}
-              onChange={(e) => setDuration(e.target.value)}
-              placeholder="234"
-            />
+            <input id="duration" type="number" value={duration} onChange={(e) => update({ duration: e.target.value })} placeholder="154" />
           </div>
         </div>
 
         <div className="provider-row">
           <span className="provider-label">Provider</span>
           <div className="provider-tabs">
-            {([
-              { id: 'ttml', label: 'TTML', desc: 'Syllable-level' },
-              { id: 'kugou', label: 'Kugou', desc: 'Line-level' },
-              { id: 'legacy', label: 'Legacy', desc: 'Fallback' },
-            ] as const).map((p) => (
+            {PROVIDERS.map((p) => (
               <button
                 key={p.id}
                 type="button"
                 className={`provider-tab ${provider === p.id ? 'active' : ''}`}
-                onClick={() => setProvider(p.id)}
+                onClick={() => update({ provider: p.id })}
               >
                 <span className="provider-tab-label">{p.label}</span>
                 <span className="provider-tab-desc">{p.desc}</span>
@@ -273,83 +328,104 @@ export default function Playground() {
           </div>
         </div>
 
-        <button
-          className="fetch-btn"
-          onClick={fetchLyrics}
-          disabled={loading || (!song && !artist)}
-        >
-          {loading ? 'Fetching...' : 'Fetch lyrics'}
+        <button type="submit" className="fetch-btn" disabled={loading || !hasQuery}>
+          <TextMorph>{loading ? 'Fetching...' : 'Fetch lyrics'}</TextMorph>
         </button>
-      </div>
+      </form>
 
-      {response && (
-        <div className="playground-response">
-          <div className="response-header">
-            <span className="response-title">Response</span>
-            <div className="response-meta">
-              <span
-                className="status-badge"
-                style={{ color: getStatusColor(response.status) }}
-              >
-                {response.status} {response.statusText}
-              </span>
-              <span className="response-time">{response.time}ms</span>
-            </div>
-          </div>
+      {hasQuery && (
+        <div className="request-bar">
+          <span className="request-method">GET</span>
+          <code className="request-url">{apiUrl}</code>
+          {response && (
+            <span className="request-meta">
+              <TextMorph style={{ color: getStatusColor(response.status) }}>{String(response.status || 'Error')}</TextMorph>
+              <TextMorph>{`${response.time}ms`}</TextMorph>
+            </span>
+          )}
+          <span className="request-actions">
+            <button type="button" onClick={() => copy('url', apiUrl)}>
+              <TextMorph>{copied === 'url' ? 'Copied' : 'Copy URL'}</TextMorph>
+            </button>
+            <button type="button" onClick={() => copy('share', window.location.href)}>
+              <TextMorph>{copied === 'share' ? 'Link copied' : 'Share'}</TextMorph>
+            </button>
+          </span>
+        </div>
+      )}
 
-          <div className="response-content">
-            <div className="response-headers">
-              <h4>Headers</h4>
-              <div className="headers-list">
-                {Object.entries(response.headers).map(([key, value]) => (
-                  <div key={key} className="header-item">
-                    <span className="header-key">{key}:</span>
-                    <span className="header-value">{value}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="response-body">
-              <div className="body-header">
-                <h4>Body</h4>
-                {(response.body.ttml || response.body.lyrics) && (
-                  <div className="view-toggle">
-                    <button
-                      className={viewMode === 'raw' ? 'active' : ''}
-                      onClick={() => setViewMode('raw')}
-                    >
-                      Raw
-                    </button>
-                    <button
-                      className={viewMode === 'parsed' ? 'active' : ''}
-                      onClick={() => setViewMode('parsed')}
-                    >
-                      Parsed
-                    </button>
-                  </div>
-                )}
-              </div>
-              <div className="body-content">
-                <pre><code ref={codeRef} className="language-json">{formatBody(response.body)}</code></pre>
-              </div>
-            </div>
+      {response?.status === 401 && (
+        <div className="callout" role="note">
+          <div className="callout-body">
+            <p>
+              <strong>These lyrics are not cached yet.</strong> Fresh fetches need an API key, and keys are not
+              being issued right now. See <a href="/docs/authentication#loading-uncached-songs">Loading uncached songs</a> for
+              a workaround.
+            </p>
           </div>
         </div>
       )}
 
-      {response?.body.ttml && (
-        <Timeline ttml={response.body.ttml} />
-      )}
+      {response && (
+        <div className="output">
+          <div className="output-tabs">
+            <SegmentedControl variant="underline" ariaLabel="Output" options={outputTabs} value={activeTab} onChange={setTab} />
+          </div>
 
-      {(song || artist) && (
-        <CodeExamples
-          song={song}
-          artist={artist}
-          album={album}
-          duration={duration}
-          provider={provider}
-        />
+          {activeTab === 'preview' && lyricsContent && (
+            <>
+              <LyricsPreview content={lyricsContent} durationS={Number(duration) || undefined} />
+              <BraccatoExample song={song} artist={artist} album={album} duration={duration} />
+            </>
+          )}
+
+          {activeTab === 'timeline' && response.body.ttml && (
+            <div className="output-embed">
+              <Timeline ttml={response.body.ttml} />
+            </div>
+          )}
+
+          {activeTab === 'response' && (
+            <div className="response-content">
+              <div className="response-headers">
+                <h4>Headers</h4>
+                <div className="headers-list">
+                  {Object.entries(response.headers).map(([key, value]) => (
+                    <div key={key} className="header-item">
+                      <span className="header-key">{key}</span>
+                      <span className="header-value">{value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="response-body">
+                <div className="body-header">
+                  <SegmentedControl ariaLabel="Body view" options={bodyViews} value={activeBodyView} onChange={setViewMode} />
+                  <span className="body-actions">
+                    <button type="button" onClick={() => copy('body', bodyText)}>
+                      <TextMorph>{copied === 'body' ? 'Copied' : 'Copy'}</TextMorph>
+                    </button>
+                    <button type="button" onClick={downloadBody}>
+                      Download
+                    </button>
+                  </span>
+                </div>
+                <div className="body-content">
+                  <pre key={activeBodyView} className={activeBodyView === 'content' ? 'wrap' : undefined}>
+                    <code ref={codeRef} className={`language-${bodyLanguage}`}>{bodyText}</code>
+                  </pre>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'code' && (
+            <div className="output-embed">
+              <CodeExamples song={song} artist={artist} album={album} duration={duration} provider={provider} />
+            </div>
+          )}
+        </div>
       )}
 
       <style>{`
@@ -357,7 +433,7 @@ export default function Playground() {
           display: flex;
           flex-direction: column;
           gap: var(--space-6);
-          overflow: hidden;
+          overflow: clip;
         }
 
         .playground-inputs {
@@ -381,7 +457,6 @@ export default function Playground() {
         .input-group {
           display: flex;
           flex-direction: column;
-          gap: var(--space-2);
         }
 
         .provider-row {
@@ -406,28 +481,27 @@ export default function Playground() {
           flex-direction: column;
           align-items: flex-start;
           gap: 2px;
-          padding: var(--space-3) var(--space-4);
-          background-color: var(--bg-secondary);
+          padding: var(--space-2) var(--space-3);
+          background-color: var(--surface-panel);
           border: 1px solid var(--border);
           border-radius: var(--radius-lg);
           cursor: pointer;
-          transition: all var(--transition-fast);
+          transition: border-color var(--transition-fast), background-color var(--transition-fast);
           min-width: 100px;
         }
 
         .provider-tab:hover {
           border-color: var(--border-hover);
-          background-color: var(--bg-tertiary);
         }
 
         .provider-tab.active {
-          border-color: var(--accent-border);
-          background-color: var(--accent-subtle);
+          border-color: var(--border-hover);
+          background-color: var(--bg-tertiary);
         }
 
         .provider-tab-label {
-          font-size: 0.9375rem;
-          font-weight: 600;
+          font-size: 0.875rem;
+          font-weight: 500;
           color: var(--text-primary);
         }
 
@@ -436,29 +510,26 @@ export default function Playground() {
           color: var(--text-muted);
         }
 
-        .provider-tab.active .provider-tab-label {
-          color: var(--accent);
-        }
-
         .provider-tab.active .provider-tab-desc {
           color: var(--text-secondary);
         }
 
         .fetch-btn {
           align-self: flex-start;
-          padding: var(--space-3) var(--space-6);
-          background-color: var(--accent);
-          color: white;
+          padding: var(--space-2) var(--space-4);
+          background-color: var(--text-primary);
+          color: var(--bg-primary);
           border: none;
           border-radius: var(--radius-lg);
-          font-size: 0.9375rem;
+          font-family: var(--font-sans);
+          font-size: 0.875rem;
           font-weight: 500;
           cursor: pointer;
-          transition: all var(--transition-fast);
+          transition: opacity var(--transition-fast);
         }
 
         .fetch-btn:hover:not(:disabled) {
-          background-color: var(--accent-hover);
+          opacity: 0.85;
         }
 
         .fetch-btn:disabled {
@@ -466,46 +537,136 @@ export default function Playground() {
           cursor: not-allowed;
         }
 
-        .playground-response {
-          background-color: var(--bg-secondary);
-          border: 1px solid var(--border);
-          border-radius: var(--radius-xl);
-          overflow: hidden;
+        .presets {
+          display: flex;
+          flex-direction: column;
+          gap: var(--space-2);
         }
 
-        .response-header {
+        .presets-label {
+          font-size: 0.8125rem;
+          font-weight: 500;
+          color: var(--text-secondary);
+        }
+
+        .presets-list {
           display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: var(--space-4);
-          border-bottom: 1px solid var(--border);
+          flex-wrap: wrap;
+          gap: var(--space-2);
+        }
+
+        .preset {
+          display: inline-flex;
+          align-items: baseline;
+          gap: var(--space-2);
+          padding: 0.25rem var(--space-3);
+          font-size: 0.8125rem;
+          font-weight: 500;
+          color: var(--text-primary);
+          background-color: var(--surface-panel);
+          border: 1px solid var(--border);
+          border-radius: var(--radius-full);
+          cursor: pointer;
+          transition: border-color var(--transition-fast), background-color var(--transition-fast);
+        }
+
+        .preset:hover:not(:disabled) {
+          border-color: var(--border-hover);
           background-color: var(--bg-tertiary);
         }
 
-        .response-title {
+        .preset:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        .preset-artist {
+          font-weight: 400;
+          color: var(--text-muted);
+        }
+
+        .request-bar {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: var(--space-2) var(--space-3);
+          padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
+          background-color: var(--surface-code);
+          border: 1px solid var(--border-subtle);
+          border-radius: var(--radius-lg);
+        }
+
+        .request-method {
+          font-family: var(--font-mono);
+          font-size: 0.6875rem;
           font-weight: 600;
           color: var(--text-primary);
         }
 
-        .response-meta {
+        .request-url {
+          flex: 1 1 16rem;
+          min-width: 0;
+          padding: 0;
+          background: none;
+          font-size: 0.75rem;
+          color: var(--text-secondary);
+          overflow-x: auto;
+          white-space: nowrap;
+          scrollbar-width: none;
+        }
+
+        .request-meta {
           display: flex;
-          align-items: center;
-          gap: var(--space-4);
-        }
-
-        .status-badge {
-          font-weight: 600;
-          font-size: 0.875rem;
-        }
-
-        .response-time {
-          font-size: 0.8125rem;
+          gap: var(--space-3);
+          font-family: var(--font-mono);
+          font-size: 0.75rem;
           color: var(--text-muted);
+        }
+
+        .request-actions {
+          display: flex;
+          gap: var(--space-1);
+        }
+
+        .request-actions button {
+          padding: var(--space-1) var(--space-2);
+          font-size: 0.75rem;
+          font-weight: 500;
+          background: none;
+          border: none;
+          border-radius: var(--radius-md);
+          color: var(--text-muted);
+          cursor: pointer;
+          transition: color var(--transition-fast), background-color var(--transition-fast);
+        }
+
+        .request-actions button:hover {
+          color: var(--text-primary);
+          background-color: var(--bg-tertiary);
+        }
+
+        .output {
+          background-color: var(--surface-code);
+          border: 1px solid var(--border-subtle);
+          border-radius: var(--radius-xl);
+          overflow: clip;
+        }
+
+        .output-tabs {
+          padding: 0 var(--space-4);
+          border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .output-embed > * {
+          margin: 0;
+          border: none;
+          border-radius: 0;
+          background: none;
         }
 
         .response-content {
           display: grid;
-          grid-template-columns: 240px minmax(0, 1fr);
+          grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
           overflow: hidden;
         }
 
@@ -517,24 +678,21 @@ export default function Playground() {
 
         .response-headers {
           padding: var(--space-4);
-          border-right: 1px solid var(--border);
-          background-color: var(--bg-primary);
+          border-right: 1px solid var(--border-subtle);
         }
 
         @media (max-width: 768px) {
           .response-headers {
             border-right: none;
-            border-bottom: 1px solid var(--border);
+            border-bottom: 1px solid var(--border-subtle);
           }
         }
 
         .response-headers h4,
         .response-body h4 {
           font-size: 0.75rem;
-          font-weight: 600;
+          font-weight: 500;
           color: var(--text-muted);
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
           margin: 0 0 var(--space-3);
         }
 
@@ -545,7 +703,10 @@ export default function Playground() {
         }
 
         .header-item {
-          font-size: 0.8125rem;
+          display: flex;
+          flex-direction: column;
+          font-family: var(--font-mono);
+          font-size: 0.75rem;
           word-break: break-all;
         }
 
@@ -555,7 +716,6 @@ export default function Playground() {
 
         .header-value {
           color: var(--text-secondary);
-          margin-left: var(--space-1);
         }
 
         .response-body {
@@ -568,47 +728,43 @@ export default function Playground() {
           display: flex;
           justify-content: space-between;
           align-items: center;
+          gap: var(--space-3);
           margin-bottom: var(--space-3);
         }
 
-        .body-header h4 {
-          margin: 0;
-        }
-
-        .view-toggle {
+        .body-actions {
           display: flex;
-          gap: var(--space-1);
+          gap: 2px;
         }
 
-        .view-toggle button {
-          padding: var(--space-1) var(--space-3);
+        .body-actions button {
+          display: inline-flex;
+          padding: var(--space-1) var(--space-2);
           font-size: 0.75rem;
           font-weight: 500;
-          background: transparent;
-          border: 1px solid var(--border);
-          border-radius: var(--radius-sm);
+          background: none;
+          border: none;
+          border-radius: var(--radius-md);
           color: var(--text-muted);
           cursor: pointer;
-          transition: all var(--transition-fast);
+          transition: color var(--transition-fast), background-color var(--transition-fast);
         }
 
-        .view-toggle button:hover {
-          border-color: var(--border-hover);
-          color: var(--text-secondary);
-        }
-
-        .view-toggle button.active {
-          background-color: var(--bg-tertiary);
-          border-color: var(--border-hover);
+        .body-actions button:hover {
           color: var(--text-primary);
+          background-color: var(--bg-tertiary);
         }
 
         .body-content {
           background-color: var(--bg-primary);
-          border-radius: var(--radius-md);
-          font-size: 0.8125rem;
+          border-radius: var(--radius-lg);
           max-height: 400px;
           overflow: auto;
+        }
+
+        .body-content pre.wrap code {
+          white-space: pre-wrap;
+          word-break: break-all;
         }
 
         .body-content pre {

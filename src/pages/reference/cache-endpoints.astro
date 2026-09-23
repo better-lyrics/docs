@@ -1,17 +1,59 @@
 ---
+import CodeTabs from '../../components/CodeTabs.astro';
 import DocsLayout from '../../layouts/DocsLayout.astro';
 ---
 
 <DocsLayout title="Cache endpoints">
   <p>
-    Administrative endpoints for cache inspection and management.
-    All endpoints (except <code>/cache/help</code>) require the <code>Authorization</code> header
-    with a valid cache access token.
+    Admin endpoints for inspecting and managing the cache.
+    All endpoints except <code>/cache/help</code> and <code>/cache</code> require the <code>Authorization</code> header
+    with the cache access token, sent as is with no <code>Bearer</code> prefix. A missing or wrong token returns
+    <code>401</code> with the plain text body <code>Unauthorized</code>.
   </p>
 
   <h2>Authentication</h2>
-  <pre><code class="language-bash">curl -H "Authorization: your-cache-token" \
-  "https://lyrics-api.boidu.dev/cache"</code></pre>
+  <CodeTabs tabs={[
+    { language: 'curl', code: `curl -H "Authorization: your-cache-token" \\
+  "https://api.betterlyrics.org/cache/keys"` },
+    { language: 'javascript', code: `const res = await fetch("https://api.betterlyrics.org/cache/keys", {
+  headers: { "Authorization": "your-cache-token" },
+});
+const data = await res.json();` },
+    { language: 'python', code: `import requests
+
+res = requests.get(
+    "https://api.betterlyrics.org/cache/keys",
+    headers={"Authorization": "your-cache-token"},
+)
+data = res.json()` },
+    { language: 'go', code: `package main
+
+import (
+	"fmt"
+	"io"
+	"net/http"
+)
+
+func main() {
+	req, err := http.NewRequest(http.MethodGet, "https://api.betterlyrics.org/cache/keys", nil)
+	if err != nil {
+		panic(err)
+	}
+	req.Header.Set("Authorization", "your-cache-token")
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		panic(err)
+	}
+	defer res.Body.Close()
+
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(string(body))
+}` },
+  ]} />
 
   <h2>Endpoints overview</h2>
   <table>
@@ -30,8 +72,8 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
       </tr>
       <tr>
         <td><code>GET /cache</code></td>
-        <td>Cache statistics and full dump</td>
-        <td>Yes</td>
+        <td>Removed. Returns <code>410 Gone</code> with a list of alternatives</td>
+        <td>No</td>
       </tr>
       <tr>
         <td><code>GET /cache/lookup</code></td>
@@ -49,30 +91,31 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
         <td>Yes</td>
       </tr>
       <tr>
-        <td><code>GET /cache/backup</code></td>
-        <td>Create a cache backup</td>
-        <td>Yes</td>
-      </tr>
-      <tr>
-        <td><code>GET /cache/backups</code></td>
-        <td>List available backups</td>
-        <td>Yes</td>
-      </tr>
-      <tr>
-        <td><code>GET /cache/restore</code></td>
-        <td>Restore from a backup</td>
-        <td>Yes</td>
-      </tr>
-      <tr>
         <td><code>GET /cache/clear</code></td>
-        <td>Clear the cache (creates backup first)</td>
+        <td>Clear all cached lyrics and negative entries</td>
+        <td>Yes</td>
+      </tr>
+      <tr>
+        <td><code>GET /cache/clear/{`{provider}`}</code></td>
+        <td>Clear cached lyrics and negative entries for one provider</td>
+        <td>Yes</td>
+      </tr>
+      <tr>
+        <td>
+          <code>GET /cache/backup</code>, <code>/cache/backups</code>, <code>/cache/restore</code>,
+          <code>/cache/dump</code>, <code>/cache/migrate</code>, <code>/cache/migrate/status</code>
+        </td>
+        <td>Removed. Return <code>410 Gone</code>. See <a href="#removed-endpoints">Removed endpoints</a></td>
         <td>Yes</td>
       </tr>
     </tbody>
   </table>
 
   <h2>GET /cache/lookup</h2>
-  <p>Check if lyrics are cached for a specific song.</p>
+  <p>
+    Check if lyrics are cached for a specific song. This checks the cache keys that <code>/getLyrics</code> uses,
+    with the exact duration (no duration tolerance).
+  </p>
 
   <h3>Parameters</h3>
   <table>
@@ -84,34 +127,147 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
     </thead>
     <tbody>
       <tr>
-        <td><code>s</code></td>
+        <td><code>s</code>, <code>song</code>, <code>songName</code></td>
         <td>Song name</td>
       </tr>
       <tr>
-        <td><code>a</code></td>
+        <td><code>a</code>, <code>artist</code>, <code>artistName</code></td>
         <td>Artist name</td>
       </tr>
       <tr>
-        <td><code>al</code></td>
+        <td><code>al</code>, <code>album</code>, <code>albumName</code></td>
         <td>Album name (optional)</td>
       </tr>
       <tr>
-        <td><code>d</code></td>
-        <td>Duration in seconds (optional)</td>
+        <td><code>d</code>, <code>duration</code></td>
+        <td>Duration in whole seconds (optional)</td>
       </tr>
     </tbody>
   </table>
+  <p>Send at least one of song or artist. Otherwise the response is <code>400</code>:</p>
+  <pre><code class="language-json">{`{
+  "error": "Provide at least song (s) or artist (a) parameter"
+}`}</code></pre>
 
   <h3>Example</h3>
-  <pre><code class="language-bash">curl -H "Authorization: token" \
-  "https://lyrics-api.boidu.dev/cache/lookup?s=Shape%20of%20You&a=Ed%20Sheeran"</code></pre>
+  <CodeTabs tabs={[
+    { language: 'curl', code: `curl -H "Authorization: token" \\
+  "https://api.betterlyrics.org/cache/lookup?s=Shape%20of%20You&a=Ed%20Sheeran"` },
+    { language: 'javascript', code: `const res = await fetch("https://api.betterlyrics.org/cache/lookup?s=Shape%20of%20You&a=Ed%20Sheeran", {
+  headers: { "Authorization": "token" },
+});
+const data = await res.json();` },
+    { language: 'python', code: `import requests
+
+res = requests.get(
+    "https://api.betterlyrics.org/cache/lookup?s=Shape%20of%20You&a=Ed%20Sheeran",
+    headers={"Authorization": "token"},
+)
+data = res.json()` },
+    { language: 'go', code: `package main
+
+import (
+	"fmt"
+	"io"
+	"net/http"
+)
+
+func main() {
+	req, err := http.NewRequest(http.MethodGet, "https://api.betterlyrics.org/cache/lookup?s=Shape%20of%20You&a=Ed%20Sheeran", nil)
+	if err != nil {
+		panic(err)
+	}
+	req.Header.Set("Authorization", "token")
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		panic(err)
+	}
+	defer res.Body.Close()
+
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(string(body))
+}` },
+  ]} />
 
   <pre><code class="language-json">{`{
+  "query": {
+    "song": "Shape of You",
+    "artist": "Ed Sheeran",
+    "album": "",
+    "duration": ""
+  },
   "normalized_key": "ttml_lyrics:shape of you ed sheeran",
-  "legacy_key": "ttml_lyrics:Shape of You Ed Sheeran",
+  "legacy_key": "ttml_lyrics:Shape of You Ed Sheeran ",
+  "keys_differ": true,
   "found": true,
-  "found_in": "normalized"
+  "found_in": "normalized",
+  "track_duration_ms": 233712,
+  "score": 0.97,
+  "language": "en",
+  "isRTL": false,
+  "ttml_length": 45678,
+  "ttml_preview": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\"?>..."
 }`}</code></pre>
+
+  <h3>Response fields</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Field</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>query</code></td>
+        <td>The <code>song</code>, <code>artist</code>, <code>album</code> and <code>duration</code> values as received</td>
+      </tr>
+      <tr>
+        <td><code>normalized_key</code></td>
+        <td>Cache key in the current format (lowercase, trimmed)</td>
+      </tr>
+      <tr>
+        <td><code>legacy_key</code></td>
+        <td>Cache key in the older format (original case, not trimmed)</td>
+      </tr>
+      <tr>
+        <td><code>keys_differ</code></td>
+        <td>Whether the two keys are different</td>
+      </tr>
+      <tr>
+        <td><code>found</code></td>
+        <td>Whether lyrics are cached under either key</td>
+      </tr>
+      <tr>
+        <td><code>found_in</code></td>
+        <td><code>normalized</code> or <code>legacy</code>. Only when <code>found</code> is <code>true</code>.</td>
+      </tr>
+      <tr>
+        <td><code>note</code></td>
+        <td>Set when the entry was found under the legacy key</td>
+      </tr>
+      <tr>
+        <td><code>track_duration_ms</code>, <code>score</code>, <code>language</code>, <code>isRTL</code></td>
+        <td>Stored metadata of the entry. Only when <code>found</code> is <code>true</code>.</td>
+      </tr>
+      <tr>
+        <td><code>ttml_length</code>, <code>ttml_preview</code></td>
+        <td>Length of the stored lyrics and their first 200 characters. Only when <code>found</code> is <code>true</code>.</td>
+      </tr>
+      <tr>
+        <td><code>negative_cache</code>, <code>negative_reason</code></td>
+        <td>Set when no lyrics are cached but a negative entry exists</td>
+      </tr>
+      <tr>
+        <td><code>negative_cache_in</code></td>
+        <td><code>legacy</code> when the negative entry was found under the legacy key</td>
+      </tr>
+    </tbody>
+  </table>
 
   <h2>GET /cache/keys</h2>
   <p>List and search cache keys.</p>
@@ -127,11 +283,11 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
     <tbody>
       <tr>
         <td><code>prefix</code></td>
-        <td>Filter keys by prefix</td>
+        <td>Only keys that start with this string (case-sensitive)</td>
       </tr>
       <tr>
         <td><code>contains</code></td>
-        <td>Filter keys containing substring</td>
+        <td>Only keys that contain this string (not case-sensitive)</td>
       </tr>
       <tr>
         <td><code>limit</code></td>
@@ -141,8 +297,90 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
   </table>
 
   <h3>Example</h3>
-  <pre><code class="language-bash">curl -H "Authorization: token" \
-  "https://lyrics-api.boidu.dev/cache/keys?contains=taylor&limit=10"</code></pre>
+  <CodeTabs tabs={[
+    { language: 'curl', code: `curl -H "Authorization: token" \\
+  "https://api.betterlyrics.org/cache/keys?contains=taylor&limit=10"` },
+    { language: 'javascript', code: `const res = await fetch("https://api.betterlyrics.org/cache/keys?contains=taylor&limit=10", {
+  headers: { "Authorization": "token" },
+});
+const data = await res.json();` },
+    { language: 'python', code: `import requests
+
+res = requests.get(
+    "https://api.betterlyrics.org/cache/keys?contains=taylor&limit=10",
+    headers={"Authorization": "token"},
+)
+data = res.json()` },
+    { language: 'go', code: `package main
+
+import (
+	"fmt"
+	"io"
+	"net/http"
+)
+
+func main() {
+	req, err := http.NewRequest(http.MethodGet, "https://api.betterlyrics.org/cache/keys?contains=taylor&limit=10", nil)
+	if err != nil {
+		panic(err)
+	}
+	req.Header.Set("Authorization", "token")
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		panic(err)
+	}
+	defer res.Body.Close()
+
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(string(body))
+}` },
+  ]} />
+
+  <pre><code class="language-json">{`{
+  "total_keys": 42,
+  "matched_keys": 10,
+  "limit": 10,
+  "keys": [
+    {
+      "key": "ttml_lyrics:love story taylor swift",
+      "size": 38211,
+      "provider": "ttml"
+    }
+  ]
+}`}</code></pre>
+
+  <h3>Response fields</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Field</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>total_keys</code></td>
+        <td>Number of cached lyrics keys that match the filters</td>
+      </tr>
+      <tr>
+        <td><code>matched_keys</code></td>
+        <td>Number of keys in this response (at most <code>limit</code>)</td>
+      </tr>
+      <tr>
+        <td><code>limit</code></td>
+        <td>The limit that was applied</td>
+      </tr>
+      <tr>
+        <td><code>keys</code></td>
+        <td>Keys in alphabetical order. <code>size</code> is the size of the stored lyrics in bytes.</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>Negative cache entries are not listed.</p>
 
   <h2>GET /cache/debug</h2>
   <p>Inspect a specific cache entry.</p>
@@ -164,72 +402,233 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
   </table>
 
   <h3>Example</h3>
-  <pre><code class="language-bash">curl -H "Authorization: token" \
-  "https://lyrics-api.boidu.dev/cache/debug?key=ttml_lyrics:shape%20of%20you%20ed%20sheeran"</code></pre>
+  <CodeTabs tabs={[
+    { language: 'curl', code: `curl -H "Authorization: token" \\
+  "https://api.betterlyrics.org/cache/debug?key=ttml_lyrics:shape%20of%20you%20ed%20sheeran"` },
+    { language: 'javascript', code: `const res = await fetch("https://api.betterlyrics.org/cache/debug?key=ttml_lyrics:shape%20of%20you%20ed%20sheeran", {
+  headers: { "Authorization": "token" },
+});
+const data = await res.json();` },
+    { language: 'python', code: `import requests
+
+res = requests.get(
+    "https://api.betterlyrics.org/cache/debug?key=ttml_lyrics:shape%20of%20you%20ed%20sheeran",
+    headers={"Authorization": "token"},
+)
+data = res.json()` },
+    { language: 'go', code: `package main
+
+import (
+	"fmt"
+	"io"
+	"net/http"
+)
+
+func main() {
+	req, err := http.NewRequest(http.MethodGet, "https://api.betterlyrics.org/cache/debug?key=ttml_lyrics:shape%20of%20you%20ed%20sheeran", nil)
+	if err != nil {
+		panic(err)
+	}
+	req.Header.Set("Authorization", "token")
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		panic(err)
+	}
+	defer res.Body.Close()
+
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(string(body))
+}` },
+  ]} />
 
   <pre><code class="language-json">{`{
   "key": "ttml_lyrics:shape of you ed sheeran",
-  "exists": true,
-  "compressed": true,
-  "compression_ratio": 0.34,
-  "original_size_bytes": 45678,
-  "stored_size_bytes": 15530,
-  "entry_type": "lyrics",
-  "preview": "<?xml version=\\"1.0\\"?>..."
+  "found": true,
+  "type": "lyrics",
+  "track_duration_ms": 233712,
+  "score": 0.97,
+  "language": "en",
+  "isRTL": false,
+  "ttml_length": 45678,
+  "ttml_preview": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\"?>..."
 }`}</code></pre>
 
-  <h2>GET /cache/backup</h2>
-  <p>Create a timestamped backup of the cache database.</p>
-
-  <h3>Example</h3>
-  <pre><code class="language-bash">curl -H "Authorization: token" \
-  "https://lyrics-api.boidu.dev/cache/backup"</code></pre>
-
-  <pre><code class="language-json">{`{
-  "message": "Backup created successfully",
-  "backup_path": "/data/backups/cache_backup_2025-01-06_12-30-45.db"
-}`}</code></pre>
-
-  <h2>GET /cache/restore</h2>
-  <p>Restore the cache from a backup file.</p>
-
-  <h3>Parameters</h3>
+  <h3>Response fields</h3>
   <table>
     <thead>
       <tr>
-        <th>Name</th>
+        <th>Field</th>
         <th>Description</th>
       </tr>
     </thead>
     <tbody>
       <tr>
-        <td><code>backup</code></td>
-        <td>Backup filename (from <code>/cache/backups</code>)</td>
+        <td><code>key</code></td>
+        <td>The key that was inspected</td>
+      </tr>
+      <tr>
+        <td><code>found</code></td>
+        <td>Whether an entry exists for the key</td>
+      </tr>
+      <tr>
+        <td><code>type</code></td>
+        <td>
+          <code>lyrics</code>, <code>no_lyrics_sentinel</code> (a stored "no lyrics" marker), or
+          <code>negative_cache</code>. Only when <code>found</code> is <code>true</code>.
+        </td>
+      </tr>
+      <tr>
+        <td><code>reason</code></td>
+        <td>Why no lyrics were found. Only when <code>type</code> is <code>negative_cache</code>.</td>
+      </tr>
+      <tr>
+        <td><code>track_duration_ms</code>, <code>score</code>, <code>language</code>, <code>isRTL</code></td>
+        <td>Stored metadata. Only when <code>type</code> is <code>lyrics</code>.</td>
+      </tr>
+      <tr>
+        <td><code>ttml_length</code>, <code>ttml_preview</code></td>
+        <td>Length of the stored lyrics and their first 300 characters. Only when <code>type</code> is <code>lyrics</code>.</td>
       </tr>
     </tbody>
   </table>
-
-  <h3>Example</h3>
-  <pre><code class="language-bash">curl -H "Authorization: token" \
-  "https://lyrics-api.boidu.dev/cache/restore?backup=cache_backup_2025-01-06_12-30-45.db"</code></pre>
+  <p>Without the <code>key</code> parameter, the response is <code>400</code> with <code>{`{"error": "Provide 'key' parameter"}`}</code>.</p>
 
   <h2>GET /cache/clear</h2>
-  <p>Clear all cache entries. Automatically creates a backup first.</p>
+  <p>Delete all cached lyrics and negative cache entries, for every provider. This cannot be undone through the API.</p>
 
   <h3>Example</h3>
-  <pre><code class="language-bash">curl -H "Authorization: token" \
-  "https://lyrics-api.boidu.dev/cache/clear"</code></pre>
+  <CodeTabs tabs={[
+    { language: 'curl', code: `curl -H "Authorization: token" \\
+  "https://api.betterlyrics.org/cache/clear"` },
+    { language: 'javascript', code: `const res = await fetch("https://api.betterlyrics.org/cache/clear", {
+  headers: { "Authorization": "token" },
+});
+const data = await res.json();` },
+    { language: 'python', code: `import requests
+
+res = requests.get(
+    "https://api.betterlyrics.org/cache/clear",
+    headers={"Authorization": "token"},
+)
+data = res.json()` },
+    { language: 'go', code: `package main
+
+import (
+	"fmt"
+	"io"
+	"net/http"
+)
+
+func main() {
+	req, err := http.NewRequest(http.MethodGet, "https://api.betterlyrics.org/cache/clear", nil)
+	if err != nil {
+		panic(err)
+	}
+	req.Header.Set("Authorization", "token")
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		panic(err)
+	}
+	defer res.Body.Close()
+
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(string(body))
+}` },
+  ]} />
 
   <pre><code class="language-json">{`{
-  "message": "Cache cleared successfully",
-  "backup_path": "/data/backups/cache_backup_2025-01-06_12-35-00.db"
+  "message": "Cache cleared successfully"
 }`}</code></pre>
+
+  <h2>GET /cache/clear/{`{provider}`}</h2>
+  <p>
+    Delete cached lyrics and negative cache entries for one provider. <code>provider</code> is one of
+    <code>ttml</code>, <code>kugou</code>, <code>qq</code> or <code>legacy</code>.
+  </p>
+
+  <h3>Example</h3>
+  <CodeTabs tabs={[
+    { language: 'curl', code: `curl -H "Authorization: token" \\
+  "https://api.betterlyrics.org/cache/clear/kugou"` },
+    { language: 'javascript', code: `const res = await fetch("https://api.betterlyrics.org/cache/clear/kugou", {
+  headers: { "Authorization": "token" },
+});
+const data = await res.json();` },
+    { language: 'python', code: `import requests
+
+res = requests.get(
+    "https://api.betterlyrics.org/cache/clear/kugou",
+    headers={"Authorization": "token"},
+)
+data = res.json()` },
+    { language: 'go', code: `package main
+
+import (
+	"fmt"
+	"io"
+	"net/http"
+)
+
+func main() {
+	req, err := http.NewRequest(http.MethodGet, "https://api.betterlyrics.org/cache/clear/kugou", nil)
+	if err != nil {
+		panic(err)
+	}
+	req.Header.Set("Authorization", "token")
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		panic(err)
+	}
+	defer res.Body.Close()
+
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(string(body))
+}` },
+  ]} />
+
+  <pre><code class="language-json">{`{
+  "message": "Cleared cache for provider: kugou",
+  "provider": "kugou",
+  "keys_deleted": 1234
+}`}</code></pre>
+  <p><code>keys_deleted</code> counts the deleted lyrics entries. An unknown provider returns <code>400</code>:</p>
+  <pre><code class="language-json">{`{
+  "error": "Unknown provider: foo",
+  "valid_providers": ["ttml", "kugou", "qq", "legacy"]
+}`}</code></pre>
+  <p>A database error on either clear endpoint returns <code>500</code> with an <code>error</code> field.</p>
+
+  <h2 id="removed-endpoints">Removed endpoints</h2>
+  <p>
+    <code>/cache/backup</code>, <code>/cache/backups</code>, <code>/cache/restore</code>, <code>/cache/dump</code>,
+    <code>/cache/migrate</code> and <code>/cache/migrate/status</code> are removed. Backups are handled by the
+    database platform. With a valid token they return <code>410 Gone</code>:
+  </p>
+  <pre><code class="language-json">{`{
+  "error": "Endpoint removed",
+  "message": "This operation is not available on the managed Postgres backend. Backups and point-in-time recovery are handled by the platform."
+}`}</code></pre>
+  <p>
+    <code>/cache</code> is also removed. It needs no token and returns <code>410 Gone</code> with <code>error</code>,
+    <code>message</code> and an <code>alternatives</code> object.
+  </p>
 
   <h2>Notes</h2>
   <ul>
     <li>These endpoints are for administrative use only</li>
-    <li>Cache operations may be slow for large caches</li>
-    <li>Backup/restore operations affect all cached data</li>
+    <li>Lyrics cache entries do not expire. They stay until they are cleared.</li>
     <li>The cache access token is different from the API key</li>
   </ul>
 </DocsLayout>

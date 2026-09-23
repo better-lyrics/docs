@@ -5,103 +5,89 @@ import Footer from '../components/Footer.astro';
 import TableOfContents from '../components/TableOfContents.tsx';
 import Search from '../components/Search.tsx';
 import MobileNav from '../components/MobileNav.tsx';
+import PageActions from '../components/PageActions.astro';
+import { currentPathOf, findNavLink, navSections, pageNeighbors } from '../nav';
+import { markdownPath } from '../markdownPath';
 
 interface Props {
   title: string;
   description?: string;
+  wide?: boolean;
+  pageActions?: boolean;
 }
 
-const { title, description } = Astro.props;
-const currentPath = Astro.url.pathname.replace(/\/$/, '') || '/';
+const { title, wide = false, pageActions = true } = Astro.props;
+const currentPath = currentPathOf(Astro.url);
+const description = Astro.props.description ?? findNavLink(currentPath)?.description;
+const { prev, next } = pageNeighbors(currentPath);
 
-const conceptsLinks = [
-  { href: '/docs/introduction', label: 'Introduction' },
-  { href: '/docs/authentication', label: 'Authentication' },
-  { href: '/docs/rate-limiting', label: 'Rate limiting' },
-  { href: '/docs/caching', label: 'Caching' },
-  { href: '/docs/providers', label: 'Providers' },
-  { href: '/docs/response-format', label: 'Response format' },
-  { href: '/docs/error-handling', label: 'Error handling' },
-  { href: '/docs/best-practices', label: 'Best practices' },
-];
-
-const referenceLinks = [
-  { href: '/reference/get-lyrics', label: 'GET /getLyrics' },
-  { href: '/reference/revalidate', label: 'GET /revalidate' },
-  { href: '/reference/health', label: 'GET /health' },
-  { href: '/reference/cache-endpoints', label: 'Cache endpoints' },
-];
+const pageFiles = Object.keys(import.meta.glob('../pages/**/*.astro'));
+const pageFile = [`../pages${currentPath === '/' ? '/index' : currentPath}.astro`, `../pages${currentPath}/index.astro`].find(
+  (candidate) => pageFiles.includes(candidate),
+);
+const editUrl = pageFile && `https://github.com/better-lyrics/docs/blob/master/src/${pageFile.replace('../', '')}`;
 ---
 
-<BaseLayout title={title} description={description}>
+<BaseLayout title={title} description={description} markdownHref={findNavLink(currentPath) && markdownPath(currentPath)}>
   <Header />
-  <MobileNav
-    client:load
-    currentPath={currentPath}
-    conceptsLinks={conceptsLinks}
-    referenceLinks={referenceLinks}
-  />
+  <MobileNav client:load currentPath={currentPath} />
 
   <div class="docs-layout">
     <aside class="sidebar">
       <nav class="sidebar-nav">
         <Search client:load />
 
-        <div class="nav-section">
-          <h4 class="nav-section-title">Concepts</h4>
-          <ul class="nav-list">
-            {conceptsLinks.map(link => (
-              <li>
-                <a
-                  href={link.href}
-                  class:list={['nav-item', { active: currentPath === link.href }]}
-                >
-                  {link.label}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div class="nav-section">
-          <h4 class="nav-section-title">Reference</h4>
-          <ul class="nav-list">
-            {referenceLinks.map(link => (
-              <li>
-                <a
-                  href={link.href}
-                  class:list={['nav-item', { active: currentPath === link.href }]}
-                >
-                  {link.label}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div class="sidebar-cta">
-          <a href="https://better-lyrics.boidu.dev" target="_blank" rel="noopener noreferrer" class="cta-card">
-            <div class="cta-header">
-              <img src="/favicon.svg" alt="Better Lyrics" width="20" height="20" loading="lazy"  />
-              <span class="cta-title">Better Lyrics</span>
-            </div>
-            <p class="cta-description">Time-synced lyrics, translations, and more for YouTube Music.</p>
-            <span class="cta-link">
-              Install extension
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M5 9L9 5M9 5H5.5M9 5V8.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </span>
-          </a>
-        </div>
+        {navSections.map(section => (
+          <div class="nav-section">
+            <h4 class="nav-section-title">{section.title}</h4>
+            <ul class="nav-list">
+              {section.links.map(link => (
+                <li>
+                  <a
+                    href={link.href}
+                    class:list={['nav-item', { active: currentPath === link.href }]}
+                  >
+                    {link.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
       </nav>
     </aside>
 
     <main class="docs-content">
       <div class="docs-content-wrapper">
-        <article class="article">
-          <h1>{title}</h1>
+        <article class:list={['article', { wide }]}>
+          <div class="page-title">
+            <h1>{title}</h1>
+            {pageActions && <PageActions />}
+          </div>
           <slot />
+
+          {pageActions && editUrl && (
+            <p class="edit-link" data-markdown-skip>
+              <a href={editUrl} target="_blank" rel="noopener noreferrer">Edit this page on GitHub</a>
+            </p>
+          )}
+
+          {(prev || next) && (
+            <nav class="pager" aria-label="Pagination" data-markdown-skip>
+              {prev && (
+                <a href={prev.href} class="pager-link prev">
+                  <span class="pager-direction">Previous</span>
+                  <span class="pager-label">{prev.label}</span>
+                </a>
+              )}
+              {next && (
+                <a href={next.href} class="pager-link next">
+                  <span class="pager-direction">Next</span>
+                  <span class="pager-label">{next.label}</span>
+                </a>
+              )}
+            </nav>
+          )}
         </article>
         <aside class="toc-sidebar">
           <TableOfContents client:load />
@@ -114,6 +100,29 @@ const referenceLinks = [
 </BaseLayout>
 
 <script>
+  import { morphFor } from '../morph';
+
+  const COPY_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 9.667a2.667 2.667 0 0 1 2.667 -2.667h8.666a2.667 2.667 0 0 1 2.667 2.667v8.666a2.667 2.667 0 0 1 -2.667 2.667h-8.666a2.667 2.667 0 0 1 -2.667 -2.667z" /><path d="M4.012 16.737a2 2 0 0 1 -1.012 -1.737v-10c0 -1.1 .9 -2 2 -2h10c.75 0 1.158 .385 1.5 1" /></svg>';
+  const CHECK_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5l10 -10" /></svg>';
+
+  document.querySelectorAll<HTMLPreElement>('.article pre:not(.playground pre)').forEach((pre) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'copy-code';
+    button.setAttribute('aria-label', 'Copy code');
+    button.innerHTML = `<span class="morph"><span data-morph="idle" data-active="true">${COPY_ICON}</span><span data-morph="copied" data-active="false" aria-hidden="true">${CHECK_ICON}</span></span>`;
+    const morph = button.firstElementChild as HTMLElement;
+    button.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(pre.querySelector('code')?.textContent ?? pre.textContent ?? '');
+        morphFor(morph, 'copied', 'idle');
+      } catch (error) {
+        console.warn('Copy failed', error);
+      }
+    });
+    pre.appendChild(button);
+  });
+
   // Use event delegation for headings (IDs are set dynamically by TableOfContents)
   document.querySelector('.article')?.addEventListener('click', (e) => {
     const heading = (e.target as Element).closest('h2, h3');
@@ -138,11 +147,10 @@ const referenceLinks = [
     flex-shrink: 0;
     border-right: 1px solid var(--border);
     overflow-y: auto;
-    background-color: var(--bg-primary);
   }
 
   .sidebar-nav {
-    padding: var(--space-6);
+    padding: var(--space-6) var(--space-4);
     display: flex;
     flex-direction: column;
     gap: var(--space-6);
@@ -150,33 +158,31 @@ const referenceLinks = [
 
   .nav-section-title {
     font-size: 0.75rem;
-    font-weight: 600;
+    font-weight: 500;
     color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-bottom: var(--space-3);
+    margin: 0 0 var(--space-2);
+    padding: 0 var(--space-3);
   }
 
   .nav-list {
     list-style: none;
     display: flex;
     flex-direction: column;
-    gap: var(--space-1);
+    gap: 2px;
   }
 
   .nav-item {
     display: block;
-    padding: var(--space-2) var(--space-3);
+    padding: 0.3125rem var(--space-3);
     border-radius: var(--radius-md);
-    font-size: 0.9375rem;
+    font-size: 0.875rem;
     color: var(--text-secondary);
-    text-decoration: none;
-    transition: all var(--transition-fast);
+    transition: color var(--transition-fast), background-color var(--transition-fast);
   }
 
   .nav-item:hover {
     color: var(--text-primary);
-    background-color: var(--bg-secondary);
+    background-color: var(--bg-tertiary);
   }
 
   .nav-item.active {
@@ -185,134 +191,196 @@ const referenceLinks = [
     font-weight: 500;
   }
 
-  .sidebar-cta {
-    margin-top: auto;
-    padding-top: var(--space-6);
-    border-top: 1px solid var(--border);
-  }
-
-  .cta-card {
-    display: block;
-    padding: var(--space-4);
-    background-color: var(--bg-secondary);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    text-decoration: none;
-    transition: all var(--transition-fast);
-  }
-
-  .cta-card:hover {
-    border-color: var(--border-hover);
-  }
-
-  .cta-header {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    margin-bottom: var(--space-2);
-  }
-
-  .cta-header img {
-    border-radius: var(--radius-sm);
-  }
-
-  .cta-title {
-    font-size: 0.9375rem;
-    font-weight: 600;
-    color: var(--text-primary);
-  }
-
-  .cta-description {
-    font-size: 0.8125rem;
-    color: var(--text-muted);
-    margin: 0 0 var(--space-1);
-    line-height: 1.4;
-  }
-
-  .cta-link {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-1);
-    font-size: 0.8125rem;
-    font-weight: 500;
-    color: var(--accent);
-  }
-
   .docs-content {
     flex: 1;
     min-width: 0;
-    padding: var(--space-8) var(--space-10);
+    padding: var(--space-8) var(--space-10) var(--space-16);
   }
 
   .docs-content-wrapper {
     display: flex;
-    gap: var(--space-10);
-    max-width: calc(var(--content-max-width) + 240px);
-    margin: 0 auto;
+    gap: var(--space-12);
   }
 
   .article {
     flex: 1;
     min-width: 0;
     max-width: var(--content-max-width);
+    margin: 0 auto;
+  }
+
+  .article.wide {
+    max-width: 64rem;
+  }
+
+  .page-title {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-4);
+    margin-bottom: var(--space-6);
+  }
+
+  .page-title h1 {
+    margin: 0;
+  }
+
+  .article :global(pre) {
+    position: relative;
+  }
+
+  .article :global(.copy-code) {
+    position: absolute;
+    top: var(--space-2);
+    right: var(--space-2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    padding: 0;
+    border: none;
+    border-radius: var(--radius-md);
+    background-color: var(--bg-secondary);
+    color: var(--text-muted);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity var(--transition-fast), color var(--transition-fast);
+  }
+
+  .article :global(pre:hover .copy-code),
+  .article :global(.copy-code:focus-visible) {
+    opacity: 1;
+  }
+
+  .article :global(.copy-code:hover) {
+    color: var(--text-primary);
+  }
+
+  .article :global(.copy-code svg) {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  @media (hover: none) {
+    .article :global(.copy-code) {
+      opacity: 1;
+    }
+  }
+
+  .edit-link {
+    margin-top: var(--space-12);
+    font-size: 0.8125rem;
+  }
+
+  .edit-link a {
+    color: var(--text-muted);
+    text-decoration: none;
+  }
+
+  .edit-link a:hover {
+    color: var(--text-primary);
+  }
+
+  .pager {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-3);
+    margin-top: var(--space-4);
+  }
+
+  .pager-link {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface-panel);
+    transition: border-color var(--transition-fast), background-color var(--transition-fast);
+  }
+
+  .pager-link:hover {
+    color: var(--text-primary);
+    border-color: var(--border-hover);
+    background-color: var(--bg-tertiary);
+  }
+
+  .pager-link.next {
+    grid-column: 2;
+    text-align: right;
+  }
+
+  .pager-direction {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+
+  .pager-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-primary);
   }
 
   .toc-sidebar {
-    width: 200px;
+    width: 192px;
     flex-shrink: 0;
   }
 
-  .article h1 {
-    font-size: 2rem;
-    margin-bottom: var(--space-6);
-    padding-bottom: var(--space-4);
-    border-bottom: 1px solid var(--border);
-  }
 
   .article :global(h2) {
     margin-top: var(--space-10);
-    margin-bottom: var(--space-4);
   }
 
   .article :global(h3) {
-    margin-top: var(--space-8);
-    margin-bottom: var(--space-3);
+    margin-top: var(--space-6);
+    margin-bottom: var(--space-2);
   }
 
-  .article :global(p) {
-    margin-bottom: var(--space-4);
-    line-height: 1.7;
+  .article :global(p a),
+  .article :global(li a),
+  .article :global(td a),
+  .article :global(.callout-body a) {
+    text-decoration: underline;
+    text-decoration-color: color-mix(in srgb, var(--accent) 50%, transparent);
+    text-underline-offset: 3px;
+    transition: text-decoration-color var(--transition-fast);
+  }
+
+  .article :global(p a:hover),
+  .article :global(li a:hover),
+  .article :global(td a:hover),
+  .article :global(.callout-body a:hover) {
+    color: var(--text-primary);
+    text-decoration-color: var(--accent);
   }
 
   .article :global(ul), .article :global(ol) {
     margin-bottom: var(--space-4);
-    padding-left: var(--space-6);
+    padding-left: var(--space-5);
   }
 
   .article :global(li) {
-    margin-bottom: var(--space-2);
-    line-height: 1.6;
+    margin-bottom: var(--space-1);
+  }
+
+  .article :global(li::marker) {
+    color: var(--text-muted);
+  }
+
+  .article :global(strong) {
+    color: var(--text-primary);
+    font-weight: 500;
   }
 
   .article :global(pre) {
-    margin-bottom: var(--space-6);
-    background-color: var(--bg-secondary);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
     padding: 0;
     overflow: hidden;
-    font-family: var(--font-mono);
-    font-size: 0.8125rem;
-    line-height: 1.6;
   }
 
   .article :global(pre code) {
     display: block;
-    background: none;
-    border: none;
-    padding: var(--space-4);
-    font-size: inherit;
-    font-family: inherit;
+    padding: var(--space-3) var(--space-4);
     overflow-x: auto;
   }
 
@@ -325,9 +393,6 @@ const referenceLinks = [
       display: none;
     }
 
-    .docs-content-wrapper {
-      max-width: var(--content-max-width);
-    }
   }
 
   @media (max-width: 1024px) {
@@ -336,18 +401,16 @@ const referenceLinks = [
     }
 
     .docs-content {
-      padding: var(--space-6);
+      padding: var(--space-6) var(--space-6) var(--space-12);
     }
   }
 
-  /* Scroll margin for anchor links */
   .article :global(h2),
   .article :global(h3) {
     scroll-margin-top: calc(var(--header-height) + var(--space-6));
     position: relative;
   }
 
-  /* Anchor link on hover */
   .article :global(h2)::before,
   .article :global(h3)::before {
     content: '#';
@@ -370,7 +433,6 @@ const referenceLinks = [
     cursor: pointer;
   }
 
-  /* Anchor link styling */
   .article :global(h2:target),
   .article :global(h3:target) {
     animation: highlight 2s ease-out;
@@ -378,7 +440,7 @@ const referenceLinks = [
 
   @keyframes highlight {
     0% {
-      background-color: var(--accent-subtle);
+      background-color: var(--bg-tertiary);
       margin-left: calc(-1 * var(--space-3));
       padding-left: var(--space-3);
       margin-right: calc(-1 * var(--space-3));

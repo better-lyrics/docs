@@ -1,30 +1,20 @@
 import { useState, useMemo, useEffect } from 'react';
+import { TextMorph } from 'torph/react';
+import SegmentedControl from './SegmentedControl';
+import { API_BASE, PROVIDER_ENDPOINTS, type Provider } from '../api';
+import { CODE_LANGUAGES, CODE_LANGUAGE_STORAGE_KEY, type CodeLanguage as Language } from '../codeLanguages';
 
-declare global {
-  interface Window {
-    Prism?: {
-      highlightAll: () => void;
-    };
-  }
-}
 
-const API_BASE = 'https://lyrics-api.boidu.dev';
 
-type Language = 'curl' | 'javascript' | 'typescript' | 'python' | 'go' | 'swift' | 'kotlin';
 
 interface CodeExamplesProps {
   song: string;
   artist: string;
   album?: string;
   duration?: string;
-  provider?: 'ttml' | 'kugou' | 'legacy';
+  provider?: Provider;
 }
 
-const PROVIDER_ENDPOINTS: Record<string, string> = {
-  ttml: '/getLyrics',
-  kugou: '/kugou/getLyrics',
-  legacy: '/legacy/getLyrics',
-};
 
 export default function CodeExamples({
   song,
@@ -35,6 +25,16 @@ export default function CodeExamples({
 }: CodeExamplesProps) {
   const [activeTab, setActiveTab] = useState<Language>('curl');
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem(CODE_LANGUAGE_STORAGE_KEY);
+    if (saved && saved in CODE_LANGUAGES) setActiveTab(saved as Language);
+  }, []);
+
+  const selectTab = (lang: Language) => {
+    setActiveTab(lang);
+    localStorage.setItem(CODE_LANGUAGE_STORAGE_KEY, lang);
+  };
 
   const endpoint = PROVIDER_ENDPOINTS[provider] || '/getLyrics';
 
@@ -221,45 +221,31 @@ client.newCall(request).execute().use { response ->
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const languages: { id: Language; label: string }[] = [
-    { id: 'curl', label: 'curl' },
-    { id: 'javascript', label: 'JavaScript' },
-    { id: 'typescript', label: 'TypeScript' },
-    { id: 'python', label: 'Python' },
-    { id: 'go', label: 'Go' },
-    { id: 'swift', label: 'Swift' },
-    { id: 'kotlin', label: 'Kotlin' },
-  ];
-
   return (
     <div className="code-examples">
       <div className="tabs-header">
-        <div className="tabs">
-          {languages.map((lang) => (
-            <button
-              key={lang.id}
-              className={`tab ${activeTab === lang.id ? 'active' : ''}`}
-              onClick={() => setActiveTab(lang.id)}
-            >
-              {lang.label}
-            </button>
-          ))}
-        </div>
+        <SegmentedControl
+          variant="underline"
+          ariaLabel="Language"
+          options={(Object.keys(CODE_LANGUAGES) as Language[]).map((lang) => ({ id: lang, label: CODE_LANGUAGES[lang].label }))}
+          value={activeTab}
+          onChange={selectTab}
+        />
         <button className="copy-btn" onClick={copyToClipboard}>
-          {copied ? 'Copied!' : 'Copy'}
+          <TextMorph>{copied ? 'Copied' : 'Copy'}</TextMorph>
         </button>
       </div>
       <pre className="code-content">
-        <code className={`language-${activeTab === 'curl' ? 'bash' : activeTab}`}>
+        <code className={`language-${CODE_LANGUAGES[activeTab].prism}`}>
           {examples[activeTab]}
         </code>
       </pre>
 
       <style>{`
         .code-examples {
-          background-color: var(--bg-secondary);
-          border: 1px solid var(--border);
-          border-radius: var(--radius-lg);
+          background-color: var(--surface-code);
+          border: 1px solid var(--border-subtle);
+          border-radius: var(--radius-xl);
           overflow: hidden;
           margin-top: var(--space-6);
         }
@@ -268,77 +254,42 @@ client.newCall(request).execute().use { response ->
           display: flex;
           justify-content: space-between;
           align-items: center;
-          padding: var(--space-2) var(--space-4);
-          border-bottom: 1px solid var(--border);
-          background-color: var(--bg-tertiary);
+          gap: var(--space-4);
+          padding: 0 var(--space-2) 0 var(--space-4);
+          border-bottom: 1px solid var(--border-subtle);
           overflow-x: auto;
         }
 
-        .tabs {
-          display: flex;
-          gap: var(--space-1);
-        }
-
-        .tab {
-          padding: var(--space-2) var(--space-3);
-          font-size: 0.8125rem;
-          font-weight: 500;
-          background: transparent;
-          border: none;
-          border-radius: var(--radius-sm);
-          color: var(--text-muted);
-          cursor: pointer;
-          transition: all var(--transition-fast);
-          white-space: nowrap;
-        }
-
-        .tab:hover {
-          color: var(--text-secondary);
-          background-color: var(--bg-secondary);
-        }
-
-        .tab.active {
-          color: var(--text-primary);
-          background-color: var(--bg-secondary);
-        }
-
         .copy-btn {
-          padding: var(--space-1) var(--space-3);
+          padding: var(--space-1) var(--space-2);
+          font-family: var(--font-sans);
           font-size: 0.75rem;
           font-weight: 500;
           background: transparent;
-          border: 1px solid var(--border);
-          border-radius: var(--radius-sm);
+          border: none;
+          border-radius: var(--radius-md);
           color: var(--text-muted);
           cursor: pointer;
-          transition: all var(--transition-fast);
+          transition: color var(--transition-fast), background-color var(--transition-fast);
           white-space: nowrap;
         }
 
         .copy-btn:hover {
-          border-color: var(--border-hover);
-          color: var(--text-secondary);
+          color: var(--text-primary);
+          background-color: var(--bg-tertiary);
         }
 
         .code-examples .code-content {
           margin: 0;
-          padding: var(--space-4);
-          font-size: 0.8125rem;
-          background-color: var(--bg-primary);
+          padding: var(--space-3) var(--space-4);
+          background: none;
           border: none;
-          border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+          border-radius: 0;
           max-height: 400px;
           overflow: auto;
         }
 
         .code-examples .code-content code {
-          background: none;
-          border: none;
-          padding: 0;
-          margin: 0;
-          font-size: 0.8125rem;
-          font-family: var(--font-mono);
-          line-height: 1.6;
           display: block;
         }
       `}</style>

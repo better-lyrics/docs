@@ -1,0 +1,125 @@
+---
+import DocsLayout from '../layouts/DocsLayout.astro';
+
+interface Release {
+  version: string;
+  entries: string[];
+}
+
+const BRACCATO_PACKAGES = ['core', 'parsers', 'provider-blyrics', 'types', 'rics'];
+const RELEASES_SHOWN = 5;
+
+const API_CHANGES = [
+  { date: '2026-03-08', text: 'Added the QQ provider at `/qq/getLyrics`, which returns QRC with word-level timing.' },
+  { date: '2026-01-07', text: 'Cached and negatively cached entries now match within a small duration tolerance, so `d` does not have to be exact.' },
+  { date: '2025-12-08', text: 'Introduced API keys for fresh fetches. Cached responses stay free and need no key.' },
+  { date: '2025-10-31', text: 'Added the `d` (duration) parameter to improve matching.' },
+];
+
+function escapeHtml(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function inlineMarkdown(text: string): string {
+  return escapeHtml(text).replace(/`([^`]+)`/g, '<code>$1</code>');
+}
+
+function parseChangesets(markdown: string): Release[] {
+  return markdown
+    .split(/^## /m)
+    .slice(1)
+    .map((chunk) => {
+      const [version, ...lines] = chunk.split('\n');
+      const entries: string[] = [];
+      for (const line of lines) {
+        if (line.startsWith('- ')) entries.push(line.slice(2).replace(/^[0-9a-f]{7}: /, ''));
+        else if (line.trim() === '' && entries.length > 0) entries[entries.length - 1] += '\n';
+        else if (line.startsWith('  ') && !line.trimStart().startsWith('- ') && entries.length > 0) {
+          entries[entries.length - 1] += `\n${line.trim()}`;
+        }
+      }
+      return {
+        version: version.trim(),
+        entries: entries.filter((entry) => !entry.startsWith('Updated dependencies')).map((entry) => entry.trim()),
+      };
+    })
+    .filter((release) => release.entries.length > 0);
+}
+
+async function fetchChangelog(name: string): Promise<Release[]> {
+  try {
+    const res = await fetch(`https://raw.githubusercontent.com/better-lyrics/braccato/master/packages/${name}/CHANGELOG.md`);
+    return res.ok ? parseChangesets(await res.text()).slice(0, RELEASES_SHOWN) : [];
+  } catch {
+    return [];
+  }
+}
+
+const braccato = (await Promise.all(BRACCATO_PACKAGES.map(async (name) => ({ name, releases: await fetchChangelog(name) })))).filter(
+  (pkg) => pkg.releases.length > 0,
+);
+---
+
+<DocsLayout title="Changelog">
+  <p>
+    Notable changes to the API and to the Braccato packages. Braccato entries are pulled from each package's
+    changelog when this site is built.
+  </p>
+
+  <h2>API</h2>
+  <ul class="changelog-list">
+    {API_CHANGES.map((change) => (
+      <li>
+        <time datetime={change.date}>{change.date}</time>
+        <span set:html={inlineMarkdown(change.text)} />
+      </li>
+    ))}
+  </ul>
+
+  {braccato.map((pkg) => (
+    <>
+      <h2>@braccato/{pkg.name}</h2>
+      {pkg.releases.map((release) => (
+        <>
+          <h3>{release.version}</h3>
+          <ul>
+            {release.entries.map((entry) => (
+              <li>
+                {entry.split(/\n\s*\n/).map((paragraph) => <p set:html={inlineMarkdown(paragraph)} />)}
+              </li>
+            ))}
+          </ul>
+        </>
+      ))}
+      <p class="note">
+        <a href={`https://github.com/better-lyrics/braccato/blob/master/packages/${pkg.name}/CHANGELOG.md`} target="_blank" rel="noopener noreferrer">
+          Full changelog for @braccato/{pkg.name}
+        </a>
+      </p>
+    </>
+  ))}
+</DocsLayout>
+
+<style>
+  :global(.article) .changelog-list {
+    list-style: none;
+    padding-left: 0;
+  }
+
+  .changelog-list li {
+    display: grid;
+    grid-template-columns: 6.5rem minmax(0, 1fr);
+    gap: var(--space-3);
+  }
+
+  .changelog-list time {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    padding-top: 0.125rem;
+  }
+
+  li p {
+    margin-bottom: var(--space-2);
+  }
+</style>

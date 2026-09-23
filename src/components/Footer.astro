@@ -1,118 +1,261 @@
 ---
+const columns = [
+  {
+    title: 'Docs',
+    links: [
+      { href: '/', label: 'Introduction' },
+      { href: '/docs/providers', label: 'Providers' },
+      { href: '/docs/response-format', label: 'Response format' },
+      { href: '/docs/best-practices', label: 'Best practices' },
+    ],
+  },
+  {
+    title: 'Build',
+    links: [
+      { href: '/braccato', label: 'Braccato' },
+      { href: '/playground', label: 'Playground' },
+      { href: '/reference/get-lyrics', label: 'API reference' },
+      { href: '/reference/health', label: 'API health' },
+    ],
+  },
+  {
+    title: 'Projects',
+    links: [
+      { href: 'https://better-lyrics.boidu.dev', label: 'Better Lyrics' },
+      { href: 'https://unison.boidu.dev', label: 'Unison' },
+      { href: 'https://composer.boidu.dev', label: 'Composer' },
+    ],
+  },
+  {
+    title: 'Source',
+    links: [
+      { href: 'https://github.com/better-lyrics/api', label: 'API' },
+      { href: 'https://github.com/better-lyrics/docs', label: 'Docs' },
+      { href: 'https://github.com/better-lyrics/braccato', label: 'Braccato' },
+    ],
+  },
+];
 
+const isExternal = (href: string) => href.startsWith('http');
+const year = new Date().getFullYear();
 ---
 
 <footer class="footer">
-  <a
-    href="https://better-lyrics.boidu.dev"
-    target="_blank"
-    rel="noopener noreferrer"
-    class="ecosystem-badge"
-  >
-    <img src="/favicon.svg" alt="Better Lyrics" width="16" height="16" loading="lazy" />
-    <span>
-      Part of the <strong>Better Lyrics</strong> ecosystem
-    </span>
-  </a>
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <a href="/" class="footer-logo">
+        <img src="/favicon.svg" alt="" width="18" height="18" loading="lazy" />
+        <span>Better Lyrics API</span>
+      </a>
+      <p>Free, syllable-synced lyrics for any song.</p>
+      <code>https://api.betterlyrics.org</code>
+    </div>
 
-  <div class="footer-links">
+    {columns.map(column => (
+      <nav class="footer-column" aria-label={column.title}>
+        <h4>{column.title}</h4>
+        <ul>
+          {column.links.map(link => (
+            <li>
+              <a
+                href={link.href}
+                {...(isExternal(link.href) ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+              >
+                {link.label}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </nav>
+    ))}
+  </div>
+
+  <div class="footer-bottom">
+    <p>&copy; {year} Better Lyrics. All rights reserved.</p>
     <a
-      href="https://composer.boidu.dev"
+      class="status"
+      href="https://better-lyrics.openstatus.dev"
       target="_blank"
       rel="noopener noreferrer"
-      class="footer-link"
+      data-status="unknown"
     >
-      Composer
-    </a>
-    <span class="divider"></span>
-    <a
-      href="https://github.com/better-lyrics/api"
-      target="_blank"
-      rel="noopener noreferrer"
-      class="footer-link"
-    >
-      API Source
-    </a>
-    <span class="divider"></span>
-    <a
-      href="https://github.com/better-lyrics/docs"
-      target="_blank"
-      rel="noopener noreferrer"
-      class="footer-link"
-    >
-      Docs Source
+      <span class="status-dot" aria-hidden="true"></span>
+      <span data-status-label>System status</span>
     </a>
   </div>
 </footer>
 
+<script>
+  type OpenStatusValue =
+    | 'operational'
+    | 'degraded_performance'
+    | 'partial_outage'
+    | 'major_outage'
+    | 'under_maintenance'
+    | 'unknown'
+    | 'incident';
+
+  const STATUS: Record<OpenStatusValue, { state: string; label: string }> = {
+    operational: { state: 'operational', label: 'All systems operational' },
+    degraded_performance: { state: 'degraded', label: 'Degraded performance' },
+    under_maintenance: { state: 'degraded', label: 'Under maintenance' },
+    unknown: { state: 'unknown', label: 'System status' },
+    partial_outage: { state: 'downtime', label: 'Partial outage' },
+    major_outage: { state: 'downtime', label: 'Major outage' },
+    incident: { state: 'downtime', label: 'Ongoing incident' },
+  };
+
+  import { TextMorph } from 'torph';
+
+  const link = document.querySelector<HTMLElement>('.status');
+  const labelElement = link?.querySelector<HTMLElement>('[data-status-label]');
+  const label = labelElement && new TextMorph({ element: labelElement });
+
+  fetch('https://api.openstatus.dev/public/status/better-lyrics')
+    .then((res) => (res.ok ? res.json() : null))
+    .then((body: { status?: OpenStatusValue } | null) => {
+      const status = body?.status && STATUS[body.status];
+      if (!status || !link || !label) return;
+      link.dataset.status = status.state;
+      label.update(status.label);
+    })
+    .catch((error) => console.warn('Status check failed', error));
+</script>
+
 <style>
   .footer {
     border-top: 1px solid var(--border);
-    padding: var(--space-4) var(--space-6);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    padding: var(--space-10) var(--space-6);
   }
 
-  .ecosystem-badge {
-    display: inline-flex;
+  .footer-inner {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) repeat(4, minmax(0, 1fr));
+    gap: var(--space-8);
+    max-width: 72rem;
+    margin: 0 auto;
+  }
+
+  .footer-brand {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+  }
+
+  .footer-logo {
+    display: flex;
     align-items: center;
     gap: var(--space-2);
-    padding: var(--space-2) var(--space-3);
-    border-radius: var(--radius-full);
-    background-color: var(--bg-secondary);
-    border: 1px solid var(--border);
-    color: var(--text-muted);
-    text-decoration: none;
-    font-size: 0.75rem;
-    transition: all var(--transition-fast);
-  }
-
-  .ecosystem-badge:hover {
-    border-color: var(--border-hover);
-    color: var(--text-secondary);
-  }
-
-  .ecosystem-badge img {
-    border-radius: 2px;
-  }
-
-  .ecosystem-badge strong {
-    color: var(--text-secondary);
     font-weight: 600;
-  }
-
-  .ecosystem-badge:hover strong {
     color: var(--text-primary);
   }
 
-  .footer-links {
-    display: flex;
-    align-items: center;
-    gap: var(--space-3);
+  .footer-logo:hover {
+    color: var(--text-primary);
+    opacity: 0.8;
   }
 
-  .footer-link {
-    font-size: 0.75rem;
+  .footer-brand p {
+    margin: 0;
+    font-size: 0.8125rem;
     color: var(--text-muted);
-    text-decoration: none;
-    transition: color var(--transition-fast);
   }
 
-  .footer-link:hover {
+  .footer-brand code {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    background: none;
+    padding: 0;
+  }
+
+  .footer-column h4 {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    margin-bottom: var(--space-3);
+  }
+
+  .footer-column ul {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .footer-column a {
+    font-size: 0.8125rem;
     color: var(--text-secondary);
   }
 
-  .divider {
-    width: 1px;
-    height: 12px;
-    background-color: var(--border);
+  .footer-column a:hover {
+    color: var(--text-primary);
   }
 
-  @media (max-width: 640px) {
-    .footer {
-      flex-direction: column;
-      gap: var(--space-3);
+  .footer-bottom {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    max-width: 72rem;
+    margin: var(--space-10) auto 0;
+    padding-top: var(--space-6);
+    border-top: 1px solid var(--border-subtle);
+  }
+
+  .footer-bottom p {
+    margin: 0;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+
+  .status {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: 0.25rem var(--space-3);
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-full);
+    transition: border-color var(--transition-fast), color var(--transition-fast);
+  }
+
+  .status:hover {
+    color: var(--text-primary);
+    border-color: var(--border-hover);
+  }
+
+  .status-dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: var(--radius-full);
+    background-color: var(--text-muted);
+  }
+
+  .status[data-status='operational'] .status-dot {
+    background-color: var(--success);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--success) 20%, transparent);
+  }
+
+  .status[data-status='degraded'] .status-dot {
+    background-color: var(--warning);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--warning) 20%, transparent);
+  }
+
+  .status[data-status='downtime'] .status-dot {
+    background-color: var(--error);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--error) 20%, transparent);
+  }
+
+  @media (max-width: 768px) {
+    .footer-inner {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .footer-brand {
+      grid-column: 1 / -1;
     }
   }
 </style>

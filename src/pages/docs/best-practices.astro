@@ -4,14 +4,14 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
 
 <DocsLayout title="Best practices">
   <p>
-    Follow these recommendations to get the best results from the API
-    and ensure a good experience for your users.
+    These habits get you better matches from the API and a smoother
+    experience for your users.
   </p>
 
   <h2>Always include duration</h2>
   <p>
-    The <code>duration</code> parameter significantly improves matching accuracy.
-    It helps distinguish between:
+    The <code>duration</code> parameter makes a big difference to matching.
+    It helps tell apart:
   </p>
   <ul>
     <li>Radio edits vs album versions</li>
@@ -44,13 +44,13 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
 # Less specific - may return wrong version
 /getLyrics?s=Yesterday&a=The%20Beatles`}</code></pre>
   <p>
-    While album is optional, including it improves match accuracy.
+    Album is optional, but sending it improves matching.
   </p>
 
   <h2>Trim whitespace from input</h2>
   <p>
-    While the API normalizes input server-side, you can improve cache hit rates
-    by trimming leading and trailing whitespace before sending:
+    The API normalizes input on the server, but trimming leading and trailing
+    whitespace before you send can still improve cache hit rates:
   </p>
   <pre><code class="language-javascript">{`// Before
 song = "  Shape of You  "
@@ -77,10 +77,10 @@ async function getLyrics(song, artist, duration) {
   return result;
 }`}</code></pre>
   <p>
-    Consider persisting the cache to localStorage or IndexedDB for longer retention.
+    To keep it across sessions, persist the cache to localStorage or IndexedDB.
   </p>
 
-  <h2>Handle negative cache gracefully</h2>
+  <h2>Handle negative cache hits</h2>
   <p>
     When you receive <code>X-Cache-Status: NEGATIVE_HIT</code>, the API previously
     searched for this song and found no lyrics. Don't retry immediately.
@@ -97,14 +97,14 @@ async function getLyrics(song, artist, duration) {
   </p>
   <ul>
     <li>Play uncached songs through the <a href="https://better-lyrics.boidu.dev" target="_blank" rel="noopener noreferrer">Better Lyrics</a> extension first to populate the cache</li>
-    <li>Implement request queuing to avoid bursts</li>
+    <li>Queue requests to avoid bursts</li>
     <li>Add delays between batch requests</li>
-    <li>Handle 429 responses with proper backoff</li>
+    <li>Back off when you get a 429</li>
   </ul>
 
-  <h2>Pre-fetch strategically</h2>
+  <h2>Pre-fetch upcoming songs</h2>
   <p>
-    If you know what songs will be played next, pre-fetch their lyrics:
+    If you know which songs play next, fetch their lyrics early:
   </p>
   <ul>
     <li>Fetch lyrics when a playlist loads, not when each song starts</li>
@@ -124,22 +124,23 @@ async function prefetchPlaylist(playlist, currentIndex) {
 
   <h2>Parse TTML efficiently</h2>
   <p>
-    TTML parsing can be expensive. Consider:
+    TTML parsing can be expensive. A few ways to keep it cheap:
   </p>
   <ul>
     <li>Parse once and cache the structured result</li>
     <li>Use a Web Worker for parsing if it blocks the main thread</li>
     <li>Pre-compute the next few lines during playback</li>
+    <li>Use <a href="/braccato/parsers"><code>@braccato/parsers</code></a> (built from the Better Lyrics parsers) instead of writing your own</li>
   </ul>
 
-  <h2>Handle missing timing gracefully</h2>
+  <h2>Handle missing timing</h2>
   <p>
-    Some edge cases may have incomplete timing data:
+    Timing data can be incomplete in some documents:
   </p>
   <ul>
     <li>Check that <code>begin</code> and <code>end</code> attributes exist</li>
     <li>Validate that times are parseable</li>
-    <li>Fall back to line-level display if word timing is missing</li>
+    <li>Fall back to line-level display if syllable timing is missing</li>
   </ul>
 
   <h2>Test with edge cases</h2>
@@ -156,7 +157,7 @@ async function prefetchPlaylist(playlist, currentIndex) {
 
   <h2>Monitor your usage</h2>
   <p>
-    Track metrics to optimize your integration:
+    Track these to see how your integration behaves:
   </p>
   <ul>
     <li>Cache hit rate (from <code>X-Cache-Status</code> header)</li>
@@ -169,6 +170,6 @@ async function prefetchPlaylist(playlist, currentIndex) {
   <p>
     If your project uses this API, consider adding a link to
     <a href="https://better-lyrics.boidu.dev" target="_blank" rel="noopener noreferrer">Better Lyrics</a>
-    in your app or README. It helps others discover the project and supports continued development.
+    in your app or README. It helps other people find the project and keeps development going.
   </p>
 </DocsLayout>

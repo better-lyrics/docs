@@ -1,0 +1,206 @@
+---
+import DocsLayout from '../../layouts/DocsLayout.astro';
+---
+
+<DocsLayout title="Provider">
+  <p>
+    <code>@braccato/provider-blyrics</code> fetches lyrics from several sources in priority order and
+    returns the first usable result. It includes ready-made providers for each endpoint of this API,
+    parses each response with <a href="/braccato/parsers"><code>@braccato/parsers</code></a>, and
+    hands back <code>Lyric[]</code> that you can give straight to the renderer.
+  </p>
+  <p>
+    Use it when you want fallback across providers (for example, TTML first, then QQ, then Kugou)
+    without writing the fetch, parse and retry logic yourself.
+  </p>
+
+  <h2>Install</h2>
+  <pre><code class="language-bash">{`npm i @braccato/provider-blyrics`}</code></pre>
+
+  <h2>Quickstart</h2>
+  <p>
+    Create a <code>ProviderChain</code>, register providers, and call <code>fetchLyrics</code>. Each
+    registration has a key, a display name, a sync type and the fetch function.
+  </p>
+  <pre><code class="language-javascript">{`import {
+  ProviderChain,
+  createBLyricsProvider,
+  createPortatoProvider,
+  createLegatoProvider,
+} from "@braccato/provider-blyrics";
+
+const chain = new ProviderChain();
+chain.register({ key: "ttml", displayName: "TTML", syncType: "syllable", fetch: createBLyricsProvider() });
+chain.register({ key: "qq", displayName: "QQ", syncType: "word", fetch: createPortatoProvider() });
+chain.register({ key: "kugou", displayName: "Kugou", syncType: "line", fetch: createLegatoProvider() });
+
+const controller = new AbortController();
+const result = await chain.fetchLyrics({
+  song: "Wanderlust",
+  artist: "The Weeknd",
+  album: "Kiss Land (Deluxe)",
+  duration: 307,
+  signal: controller.signal,
+});
+
+if (result) {
+  view.lyrics = result.lyrics;
+}`}</code></pre>
+  <p>
+    <code>duration</code> is in seconds, like the API's <code>d</code> parameter. The
+    <code>signal</code> is required and goes in the same object. Aborting it stops the chain.
+  </p>
+
+  <h2>Built-in providers</h2>
+  <p>
+    Each factory returns a fetch function. Every one accepts <code>apiUrl</code> and
+    <code>timeout</code> options (the timeout defaults to 10 seconds).
+  </p>
+  <table>
+    <thead>
+      <tr>
+        <th>Factory</th>
+        <th>Source</th>
+        <th>Format</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>createBLyricsProvider</code></td>
+        <td>This API, <code>/getLyrics</code></td>
+        <td>TTML, syllable-synced</td>
+      </tr>
+      <tr>
+        <td><code>createPortatoProvider</code></td>
+        <td>This API, <code>/qq/getLyrics</code></td>
+        <td>QRC, word-level. Passes song and artist to <code>parseQRC</code> to drop title lines</td>
+      </tr>
+      <tr>
+        <td><code>createLegatoProvider</code></td>
+        <td>This API, <code>/kugou/getLyrics</code></td>
+        <td>LRC, line-synced</td>
+      </tr>
+      <tr>
+        <td><code>createLRCLibSyncedProvider</code></td>
+        <td>LRCLib</td>
+        <td>Synced LRC</td>
+      </tr>
+      <tr>
+        <td><code>createLRCLibPlainProvider</code></td>
+        <td>LRCLib</td>
+        <td>Plain text, unsynced</td>
+      </tr>
+      <tr>
+        <td><code>createBinimumProvider</code></td>
+        <td>BiniLyrics</td>
+        <td>TTML</td>
+      </tr>
+      <tr>
+        <td><code>createUnisonProvider</code></td>
+        <td>Unison</td>
+        <td>TTML, LRC or plain text. Matches on <code>videoId</code> when you pass one</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>
+    You can register your own provider too. A fetch function takes the context object and returns a
+    result, or <code>null</code> when it has nothing.
+  </p>
+
+  <h2>Order</h2>
+  <p>
+    Without a <code>priority</code> option, the chain tries providers by sync type: syllable, then
+    word, then line, then unsynced. Pass <code>priority</code> to set the order yourself, and
+    <code>disabled</code> to skip some:
+  </p>
+  <pre><code class="language-javascript">{`const result = await chain.fetchLyrics(context, {
+  priority: ["ttml", "kugou", "qq"],
+  disabled: new Set(["kugou"]),
+});`}</code></pre>
+  <p>
+    The chain returns the first result with at least one line. A provider that throws is skipped, and
+    the chain moves on. If no provider has lyrics, <code>fetchLyrics</code> returns <code>null</code>.
+  </p>
+
+  <h2>Options</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Option</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>priority</code></td>
+        <td>Provider keys in the order to try them</td>
+      </tr>
+      <tr>
+        <td><code>disabled</code></td>
+        <td>A <code>Set</code> of provider keys to skip</td>
+      </tr>
+      <tr>
+        <td><code>validate</code></td>
+        <td>Called with each result. Return <code>false</code> to reject it and try the next provider</td>
+      </tr>
+      <tr>
+        <td><code>onProviderResult</code></td>
+        <td>Called with the key and result (or <code>null</code>) of each provider tried</td>
+      </tr>
+      <tr>
+        <td><code>onProviderError</code></td>
+        <td>Called with the key and error when a provider throws</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Result</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Field</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>lyrics</code></td>
+        <td>The parsed <code>Lyric[]</code></td>
+      </tr>
+      <tr>
+        <td><code>source</code>, <code>sourceHref</code></td>
+        <td>A display name and link for the source, for attribution</td>
+      </tr>
+      <tr>
+        <td><code>language</code></td>
+        <td>The lyrics language, when the source reports one</td>
+      </tr>
+      <tr>
+        <td><code>cacheAllowed</code></td>
+        <td>Whether the source allows you to cache the result</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Validation</h2>
+  <p>
+    To avoid a wrong match, compare the result against text you already have.
+    <code>createSimilarityValidator</code> rejects results whose text is less similar to the reference
+    than the threshold (0 to 1, default 0.5):
+  </p>
+  <pre><code class="language-javascript">{`import { createSimilarityValidator } from "@braccato/provider-blyrics";
+
+const validate = createSimilarityValidator(referenceText, 0.5);
+const result = await chain.fetchLyrics(context, { validate });`}</code></pre>
+
+  <h2>One chain per song</h2>
+  <div class="callout" role="note">
+    <div class="callout-body">
+      <p>
+        The chain caches each provider's result by provider key, not by song. Call
+        <code>chain.clearCache()</code> before you fetch the next song, or create a new chain for each
+        song. Otherwise the chain returns the previous song's lyrics.
+      </p>
+    </div>
+  </div>
+</DocsLayout>
