@@ -8,7 +8,7 @@ const currentPath = currentPathOf(Astro.url);
   <div class="header-content">
     <a href="/" class="logo">
       <img src="/favicon.svg" alt="" width="20" height="20" loading="eager" />
-      <span>Better Lyrics Docs</span>
+      <span>Better Lyrics <span class="logo-suffix">Docs</span></span>
     </a>
 
     <nav class="nav">
@@ -52,6 +52,10 @@ const currentPath = currentPathOf(Astro.url);
     letter-spacing: -0.01em;
     color: var(--text-primary);
     transition: opacity var(--transition-fast);
+  }
+
+  .logo-suffix {
+    color: var(--text-secondary);
   }
 
   .logo:hover {

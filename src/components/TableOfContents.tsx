@@ -12,8 +12,8 @@ interface Row {
   x: number;
 }
 
-const LEVEL_2_X = 0.5;
-const LEVEL_3_X = 10.5;
+const LEVEL_2_X = 8.5;
+const LEVEL_3_X = 18.5;
 const STEP_REACH = 11;
 
 function railPath(rows: Row[]): string {
