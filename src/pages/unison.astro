@@ -1,0 +1,255 @@
+---
+import CodeTabs from '../components/CodeTabs.astro';
+import DocsLayout from '../layouts/DocsLayout.astro';
+import type { CodeLanguage } from '../codeLanguages';
+
+const BASE_URL = 'https://unison.boidu.dev';
+const VIDEO_URL = `${BASE_URL}/lyrics?v=dQw4w9WgXcQ`;
+const SONG_ARTIST_URL = `${BASE_URL}/lyrics?song=Never+Gonna+Give+You+Up&artist=Rick+Astley`;
+const SEARCH_URL = `${BASE_URL}/lyrics/search?q=never+gonna+give`;
+const VARIANTS_URL = `${BASE_URL}/lyrics/variants/dQw4w9WgXcQ?limit=5`;
+const TRANSLATE_URL = `${BASE_URL}/translate`;
+
+function fetchTabs(url: string): { language: CodeLanguage; code: string }[] {
+  return [
+    { language: 'curl', code: `curl "${url}"` },
+    { language: 'javascript', code: `const res = await fetch("${url}")\nconst { success, data } = await res.json()` },
+    { language: 'python', code: `import requests\n\nbody = requests.get("${url}").json()` },
+    {
+      language: 'go',
+      code: `res, err := http.Get("${url}")\nif err != nil {\n    log.Fatal(err)\n}\ndefer res.Body.Close()\nbody, _ := io.ReadAll(res.Body)`,
+    },
+    { language: 'rust', code: `let body = reqwest::blocking::get(\n    "${url}",\n)?\n.text()?;` },
+  ];
+}
+
+const VIDEO_RESPONSE = `{
+  "success": true,
+  "data": {
+    "id": 4821,
+    "videoId": "dQw4w9WgXcQ",
+    "song": "Never Gonna Give You Up",
+    "artist": "Rick Astley",
+    "album": "Whenever You Need Somebody",
+    "duration": 213,
+    "format": "ttml",
+    "syncType": "richsync",
+    "language": "en",
+    "score": 42,
+    "voteCount": 47,
+    "confidence": "high",
+    "lyrics": "<tt xmlns=\\"http://www.w3.org/ns/ttml\\"> ... </tt>"
+  }
+}`;
+
+const SEARCH_RESPONSE = `{
+  "success": true,
+  "data": [
+    {
+      "id": 4821,
+      "videoId": "dQw4w9WgXcQ",
+      "song": "Never Gonna Give You Up",
+      "artist": "Rick Astley",
+      "format": "ttml",
+      "syncType": "richsync",
+      "confidence": "high",
+      "matchScore": 0.98
+    }
+  ]
+}`;
+
+const TRANSLATE_RESPONSE = `{
+  "lines": [
+    { "translation": "Hello", "romanization": "annyeonghaseyo", "needsTranslation": true },
+    { "translation": "Nice to meet you", "romanization": "bangapseumnida", "needsTranslation": true }
+  ],
+  "detectedLang": "ko",
+  "provider": "google-lyrics-translate",
+  "cached": false
+}`;
+
+const ERROR_RESPONSE = `{
+  "success": false,
+  "error": "Not found",
+  "code": "NOT_FOUND",
+  "hint": "No lyrics matched that lookup yet."
+}`;
+---
+
+<DocsLayout title="Unison">
+  <p>
+    <a href="https://unison.boidu.dev" target="_blank" rel="noopener noreferrer">Unison</a> is a public
+    database of community-synced lyrics, the community-fed source Better Lyrics reads from. Each entry is
+    keyed on a <code>videoId</code>. Reading from it needs no key and no sign-in. Every
+    <code>/lyrics</code> response is wrapped as <code>{`{ success, data }`}</code>, so check
+    <code>success</code> before you touch <code>data</code>. Reads are rate limited to 120 requests per
+    minute per IP.
+  </p>
+
+  <h2>Base URL</h2>
+  <pre><code class="language-bash">{BASE_URL}</code></pre>
+
+  <h2>Quick start</h2>
+  <p>
+    If you have a video id, one call gets you the top-ranked lyrics for it. The synced text is in
+    <code>data.lyrics</code> and its format is in <code>data.format</code>.
+  </p>
+  <CodeTabs tabs={[
+    { language: 'curl', code: `curl "${VIDEO_URL}"` },
+    { language: 'javascript', code: `const res = await fetch("${VIDEO_URL}")
+const { success, data } = await res.json()
+
+if (success) {
+  // data.format is "ttml" | "lrc" | "plain"
+  // data.lyrics holds the synced text in that format
+  render(data.lyrics, data.format)
+}` },
+    { language: 'python', code: `import requests
+
+res = requests.get("${BASE_URL}/lyrics", params={"v": "dQw4w9WgXcQ"})
+body = res.json()
+
+if body["success"]:
+    data = body["data"]
+    # data["format"] is "ttml" | "lrc" | "plain"
+    render(data["lyrics"], data["format"])` },
+    { language: 'go', code: `res, err := http.Get("${VIDEO_URL}")
+if err != nil {
+    log.Fatal(err)
+}
+defer res.Body.Close()
+
+// body.data.lyrics holds the synced text in body.data.format
+body, _ := io.ReadAll(res.Body)
+fmt.Println(string(body))` },
+    { language: 'rust', code: `// reqwest = { version = "0.12", features = ["blocking"] }
+let body = reqwest::blocking::get(
+    "${VIDEO_URL}",
+)?
+.text()?;
+
+// body.data.lyrics holds the synced text in body.data.format
+println!("{body}");` },
+  ]} />
+
+  <h2>Fetch by video</h2>
+  <p>
+    <code>GET /lyrics?v=&lt;videoId&gt;</code> returns the single best version for that video. The
+    fields you need to render are <code>lyrics</code>, <code>format</code>, and <code>syncType</code>;
+    <code>confidence</code> tells you how much the community has vetted it. A miss returns
+    <code>404</code>.
+  </p>
+  <pre><code class="language-json">{VIDEO_RESPONSE}</code></pre>
+
+  <h2>Fetch by song and artist</h2>
+  <p>
+    No video id? Look up by <code>song</code> and <code>artist</code> instead. Both are matched
+    case-insensitively. Add <code>album</code> or <code>duration</code> (seconds, matched within a
+    small tolerance) when a title has more than one recording.
+  </p>
+  <CodeTabs tabs={fetchTabs(SONG_ARTIST_URL)} />
+
+  <h2>Search</h2>
+  <p>
+    <code>GET /lyrics/search?q=&lt;text&gt;</code> is for discovery. It returns ranked candidates with a
+    <code>matchScore</code> but no lyric body, so pick the <code>videoId</code> you want and fetch it
+    with <code>/lyrics?v=</code>. Passing <code>song</code> and <code>artist</code> instead of
+    <code>q</code> runs an exact match and does include the full records. Use <code>limit</code> to cap
+    results.
+  </p>
+  <CodeTabs tabs={fetchTabs(SEARCH_URL)} />
+  <pre><code class="language-json">{SEARCH_RESPONSE}</code></pre>
+
+  <h2>Other versions</h2>
+  <p>
+    A video can have several submitted versions. <code>GET /lyrics/variants/:videoId</code> lists them
+    all, best-ranked first (up to 50), so you can offer alternatives if the default is not the one you
+    want. <code>GET /lyrics/:id</code> fetches one specific version by its numeric id.
+  </p>
+  <CodeTabs tabs={fetchTabs(VARIANTS_URL)} />
+
+  <h2>Translating lyrics</h2>
+  <p>
+    <code>POST /translate</code> turns a block of lyrics into another language and romanizes it in one
+    call, so every client isn't hitting Google's rate-limited endpoint on its own. Send the
+    <code>lines</code> you want, the target language in <code>to</code>, and the source language in
+    <code>from</code>. Leave <code>from</code> out and Unison detects it, then echoes what it picked back
+    as <code>detectedLang</code>.
+  </p>
+  <CodeTabs tabs={[
+    { language: 'curl', code: `curl -X POST "${TRANSLATE_URL}" \\
+  -H "content-type: application/json" \\
+  -d '{"lines":["안녕하세요","반갑습니다"],"to":"en","from":"ko"}'` },
+    { language: 'javascript', code: `const res = await fetch("${TRANSLATE_URL}", {
+  method: "POST",
+  headers: { "content-type": "application/json" },
+  body: JSON.stringify({ lines: ["안녕하세요", "반갑습니다"], to: "en", from: "ko" }),
+})
+const { lines, detectedLang } = await res.json()` },
+    { language: 'python', code: `import requests
+
+body = requests.post("${TRANSLATE_URL}", json={
+    "lines": ["안녕하세요", "반갑습니다"],
+    "to": "en",
+    "from": "ko",
+}).json()` },
+    { language: 'go', code: `payload := strings.NewReader(\`{"lines":["안녕하세요","반갑습니다"],"to":"en","from":"ko"}\`)
+res, err := http.Post("${TRANSLATE_URL}", "application/json", payload)
+if err != nil {
+    log.Fatal(err)
+}
+defer res.Body.Close()
+body, _ := io.ReadAll(res.Body)` },
+    { language: 'rust', code: `// reqwest = { version = "0.12", features = ["blocking", "json"] }
+let body = reqwest::blocking::Client::new()
+    .post("${TRANSLATE_URL}")
+    .json(&serde_json::json!({
+        "lines": ["안녕하세요", "반갑습니다"],
+        "to": "en",
+        "from": "ko",
+    }))
+    .send()?
+    .text()?;` },
+  ]} />
+  <p>
+    Each line comes back with a <code>translation</code>, a <code>romanization</code> when the source
+    isn't already in the Latin alphabet, and a <code>needsTranslation</code> flag so you can leave lines
+    that were already in the target language alone. Answers are cached per lyrics-and-language pair, so
+    the same request only reaches Google once; a cache hit sets <code>cached</code> to
+    <code>true</code>. Blank lines and lone ♪ markers keep their place and come back empty.
+  </p>
+  <pre><code class="language-json">{TRANSLATE_RESPONSE}</code></pre>
+  <p>
+    When <code>from</code> and <code>to</code> are the same language there's nothing to do, so every
+    line comes back with a null <code>translation</code> and <code>needsTranslation</code> false instead
+    of a copy of the original. A request with no real lyric lines, or one where the source language
+    can't be worked out, returns <code>400</code>; more than 200 lines or an overlong line or language
+    code returns <code>422</code>; if Google is unreachable or rate limited you get <code>502</code> or
+    <code>503</code>. A transient failure isn't cached, but the same lines failing to parse three times
+    over is remembered as a negative and short-circuits to <code>502</code> for about a month so the
+    upstream isn't hammered.
+  </p>
+
+  <h2>Formats</h2>
+  <p>
+    The <code>format</code> field tells you how to read <code>lyrics</code>, and <code>syncType</code>
+    tells you how precise the timing is.
+  </p>
+  <ul>
+    <li>
+      <code>ttml</code> is timed XML, the richest format. Pair it with <code>syncType</code>
+      <code>richsync</code> for syllable-level timing or <code>linesync</code> for per-line timing.
+    </li>
+    <li><code>lrc</code> is timestamped lines, the classic karaoke format.</li>
+    <li><code>plain</code> is unsynced text, with <code>syncType</code> <code>plain</code>.</li>
+  </ul>
+
+  <h2>Errors and limits</h2>
+  <p>
+    Failed <code>/lyrics</code> calls keep the envelope with <code>success: false</code> plus a
+    <code>code</code> and a human-readable <code>error</code> and <code>hint</code>. Common ones are
+    <code>404</code> when nothing matches and <code>400</code> when the query is missing a required
+    param. Stay under 120 requests per minute per IP or you get <code>429</code>.
+  </p>
+  <pre><code class="language-json">{ERROR_RESPONSE}</code></pre>
+</DocsLayout>

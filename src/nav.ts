@@ -7,6 +7,7 @@ export interface NavLink {
 export const headerLinks = [
   { href: '/', label: 'Docs', match: (path: string) => path === '/' || path.startsWith('/docs') },
   { href: '/braccato', label: 'Braccato', match: (path: string) => path.startsWith('/braccato') },
+  { href: '/unison', label: 'Unison', match: (path: string) => path === '/unison' },
   { href: '/playground', label: 'Playground', match: (path: string) => path === '/playground' },
   { href: '/reference/get-lyrics', label: 'Reference', match: (path: string) => path.startsWith('/reference') },
 ];
@@ -47,6 +48,12 @@ export const navSections: NavSection[] = [
       { href: '/braccato/parsers', label: 'Parsers', description: 'Parse TTML, LRC and QRC responses from every Better Lyrics API provider into one shape with @braccato/parsers.' },
       { href: '/braccato/renderer', label: 'Renderer', description: 'Render synced lyrics with the <braccato-lyrics> custom element from @braccato/core: properties, events, scrolling and theming.' },
       { href: '/braccato/provider', label: 'Provider', description: 'Fetch lyrics from several providers with fallback using @braccato/provider-blyrics.' },
+    ],
+  },
+  {
+    title: 'Unison',
+    links: [
+      { href: '/unison', label: 'Fetching lyrics', description: 'Read community-synced lyrics from Unison by video id, song and artist, or search, and translate them. No key needed.' },
     ],
   },
   { title: 'Playground', links: [{ href: '/playground', label: 'Sandbox', description: 'Try the Better Lyrics API in your browser and preview the lyrics in the Braccato engine.' }], paged: false },

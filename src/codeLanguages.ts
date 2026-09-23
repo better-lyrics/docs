@@ -8,6 +8,7 @@ export const CODE_LANGUAGES = {
   go: { label: 'Go', prism: 'go' },
   swift: { label: 'Swift', prism: 'swift' },
   kotlin: { label: 'Kotlin', prism: 'kotlin' },
+  rust: { label: 'Rust', prism: 'rust' },
 } as const;
 
 export type CodeLanguage = keyof typeof CODE_LANGUAGES;
