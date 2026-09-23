@@ -8,6 +8,7 @@ export const headerLinks = [
   { href: '/', label: 'Docs', match: (path: string) => path === '/' || path.startsWith('/docs') },
   { href: '/braccato', label: 'Braccato', match: (path: string) => path.startsWith('/braccato') },
   { href: '/unison', label: 'Unison', match: (path: string) => path === '/unison' },
+  { href: '/theming', label: 'Theming', match: (path: string) => path.startsWith('/theming') },
   { href: '/playground', label: 'Playground', match: (path: string) => path === '/playground' },
   { href: '/reference/get-lyrics', label: 'Reference', match: (path: string) => path.startsWith('/reference') },
 ];
@@ -54,6 +55,13 @@ export const navSections: NavSection[] = [
     title: 'Unison',
     links: [
       { href: '/unison', label: 'Fetching lyrics', description: 'Read community-synced lyrics from Unison by video id, song and artist, or search, and translate them. No key needed.' },
+    ],
+  },
+  {
+    title: 'Theming',
+    links: [
+      { href: '/theming', label: 'Styling guide', description: 'Style Better Lyrics with custom CSS: variables, lyric lines and words, animations, fullscreen, instrumental breaks and more.' },
+      { href: '/theming/agents', label: 'Guide for agents', description: 'A compact Better Lyrics theming reference for AI agents: CSS variables, DOM structure, selectors and theme patterns.' },
     ],
   },
   { title: 'Playground', links: [{ href: '/playground', label: 'Sandbox', description: 'Try the Better Lyrics API in your browser and preview the lyrics in the Braccato engine.' }], paged: false },

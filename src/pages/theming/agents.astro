@@ -1,0 +1,13 @@
+---
+import DocsLayout from '../../layouts/DocsLayout.astro';
+import { renderStylingDoc, stylingDocSourceUrl } from '../../stylingDocs';
+
+const html = await renderStylingDoc('STYLING-SKILL.md');
+---
+
+<DocsLayout title="Theme guide for agents">
+  <p class="note">
+    Synced from <a href={stylingDocSourceUrl('STYLING-SKILL.md')} target="_blank" rel="noopener noreferrer">STYLING-SKILL.md</a> in the Better Lyrics repository when this site is built.
+  </p>
+  <Fragment set:html={html} />
+</DocsLayout>
