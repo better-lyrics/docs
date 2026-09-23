@@ -8,7 +8,7 @@ interface Props {
 const DEFAULT_DESCRIPTION = 'Documentation for the Better Lyrics API: fetch syllable-synced lyrics for any song, for free.';
 
 const { title, description = DEFAULT_DESCRIPTION, markdownHref } = Astro.props;
-const canonical = new URL(Astro.url.pathname, Astro.site);
+const canonical = new URL(Astro.url.pathname.replace(/(.)\/$/, '$1'), Astro.site);
 const pageTitle = Astro.url.pathname === '/' ? 'Better Lyrics API Documentation' : `${title} | Better Lyrics API`;
 ---
 
