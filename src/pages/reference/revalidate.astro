@@ -41,13 +41,13 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
       <tr>
         <td><code>al</code>, <code>album</code>, <code>albumName</code></td>
         <td>string</td>
-        <td>No</td>
+        <td>Always send</td>
         <td>Album name</td>
       </tr>
       <tr>
         <td><code>d</code>, <code>duration</code></td>
         <td>string of digits</td>
-        <td>No</td>
+        <td>Always send</td>
         <td>Track duration in whole seconds</td>
       </tr>
     </tbody>
@@ -74,15 +74,15 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
   <h2>Example request</h2>
   <CodeTabs tabs={[
     { language: 'curl', code: `curl -H "X-API-Key: your-api-key" \\
-  "https://api.betterlyrics.org/revalidate?s=Shape%20of%20You&a=Ed%20Sheeran"` },
-    { language: 'javascript', code: `const res = await fetch("https://api.betterlyrics.org/revalidate?s=Shape%20of%20You&a=Ed%20Sheeran", {
+  "https://api.betterlyrics.org/revalidate?s=E85&a=Don%20Toliver&al=OCTANE&d=154"` },
+    { language: 'javascript', code: `const res = await fetch("https://api.betterlyrics.org/revalidate?s=E85&a=Don%20Toliver&al=OCTANE&d=154", {
   headers: { "X-API-Key": "your-api-key" },
 });
 const data = await res.json();` },
     { language: 'python', code: `import requests
 
 res = requests.get(
-    "https://api.betterlyrics.org/revalidate?s=Shape%20of%20You&a=Ed%20Sheeran",
+    "https://api.betterlyrics.org/revalidate?s=E85&a=Don%20Toliver&al=OCTANE&d=154",
     headers={"X-API-Key": "your-api-key"},
 )
 data = res.json()` },
@@ -95,7 +95,7 @@ import (
 )
 
 func main() {
-	req, err := http.NewRequest(http.MethodGet, "https://api.betterlyrics.org/revalidate?s=Shape%20of%20You&a=Ed%20Sheeran", nil)
+	req, err := http.NewRequest(http.MethodGet, "https://api.betterlyrics.org/revalidate?s=E85&a=Don%20Toliver&al=OCTANE&d=154", nil)
 	if err != nil {
 		panic(err)
 	}
@@ -119,7 +119,7 @@ func main() {
   <p>Status: <code>200 OK</code></p>
   <pre><code class="language-json">{`{
   "updated": true,
-  "cacheKey": "ttml_lyrics:shape of you ed sheeran",
+  "cacheKey": "ttml_lyrics:e85 don toliver octane 154s",
   "wasNegativeCache": false
 }`}</code></pre>
 
@@ -130,7 +130,7 @@ func main() {
   <pre><code class="language-json">{`{
   "error": "no lyrics found from source",
   "updated": false,
-  "cacheKey": "ttml_lyrics:shape of you ed sheeran"
+  "cacheKey": "ttml_lyrics:e85 don toliver octane 154s"
 }`}</code></pre>
 
   <h2>Response fields</h2>
@@ -196,7 +196,7 @@ func main() {
   <h2>Notes</h2>
   <ul>
     <li>Only songs that are already cached can be revalidated. Other queries return <code>404</code>.</li>
-    <li>The lookup uses the exact cache key for the query, with no duration tolerance.</li>
+    <li>The lookup uses the exact cache key for the query, with no duration tolerance. The key includes album and duration, so send the same four values you send to <code>/getLyrics</code>. Without them, the lookup usually returns <code>404</code>.</li>
     <li>Only the default TTML entry is refreshed. Entries for <code>/ttml/getLyrics</code>, <code>/kugou/getLyrics</code> and <code>/qq/getLyrics</code> are not changed.</li>
     <li>When the fetched lyrics replace a negative cache entry, the negative entry is removed</li>
     <li>The <code>updated</code> field is <code>false</code> if the content has not changed</li>

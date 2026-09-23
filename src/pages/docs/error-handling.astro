@@ -72,7 +72,11 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
 
   <h3>Missing parameters (422)</h3>
   <pre><code>Song name or artist name not provided</code></pre>
-  <p>Plain text. Send at least one of <code>s</code> (song) or <code>a</code> (artist).</p>
+  <p>
+    Plain text. Sent only when both <code>s</code> (song) and <code>a</code> (artist) are missing. Always send
+    all four parameters anyway: the cache key includes album and duration, so a request without them often
+    misses the cached entry and, without an API key, returns <code>401</code>.
+  </p>
 
   <h3>Lyrics not found (404)</h3>
   <pre><code class="language-json">{`{
@@ -90,6 +94,8 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
 }`}</code></pre>
   <p>
     The requested lyrics are not cached and the server requires an API key for fresh fetches.
+    First check that the request sends album and duration: the cache key includes both, so a request
+    without them often misses an entry that is cached.
     Keys aren't being issued right now (see <a href="/docs/authentication">Authentication</a>).
     If you have a key, pass it via <code>X-API-Key</code>. Otherwise, play the song once through the
     <a href="https://better-lyrics.boidu.dev" target="_blank" rel="noopener noreferrer">Better Lyrics</a> extension
@@ -173,8 +179,8 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
   </p>
 
   <h2>Example error handling (JavaScript)</h2>
-  <pre><code class="language-javascript">{`async function fetchLyrics(song, artist) {
-  const url = \`https://api.betterlyrics.org/getLyrics?s=\${encodeURIComponent(song)}&a=\${encodeURIComponent(artist)}\`;
+  <pre><code class="language-javascript">{`async function fetchLyrics(song, artist, album, duration) {
+  const url = \`https://api.betterlyrics.org/getLyrics?s=\${encodeURIComponent(song)}&a=\${encodeURIComponent(artist)}&al=\${encodeURIComponent(album)}&d=\${duration}\`;
 
   const response = await fetch(url);
 

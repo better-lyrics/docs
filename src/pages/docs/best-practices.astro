@@ -19,16 +19,16 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
     <li>Different songs with similar names</li>
   </ul>
   <pre><code class="language-bash">{`# Good - includes duration
-/getLyrics?s=Bohemian%20Rhapsody&a=Queen&d=354
+/getLyrics?s=Bohemian%20Rhapsody&a=Queen&al=A%20Night%20at%20the%20Opera&d=354
 
 # Less accurate - missing duration
-/getLyrics?s=Bohemian%20Rhapsody&a=Queen`}</code></pre>
+/getLyrics?s=Bohemian%20Rhapsody&a=Queen&al=A%20Night%20at%20the%20Opera`}</code></pre>
   <p>
-    If your application has access to track duration (most music players do),
-    always include it.
+    Always include it, together with the album. The cache key includes both, so a request
+    without them often misses the cached entry and, without an API key, returns <code>401</code>.
   </p>
 
-  <h2>Include album name when available</h2>
+  <h2>Always include the album name</h2>
   <p>
     Including the album name helps the API find the correct version of a song,
     especially when:
@@ -39,12 +39,13 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
     <li>The artist has re-recorded songs</li>
   </ul>
   <pre><code class="language-bash">{`# Recommended - includes album
-/getLyrics?s=Yesterday&a=The%20Beatles&album=Help!&d=125
+/getLyrics?s=Yesterday&a=The%20Beatles&al=Help!&d=125
 
 # Less specific - may return wrong version
-/getLyrics?s=Yesterday&a=The%20Beatles`}</code></pre>
+/getLyrics?s=Yesterday&a=The%20Beatles&d=125`}</code></pre>
   <p>
-    Album is optional, but sending it improves matching.
+    The API accepts a request without an album, but the cache key includes it, so a request without
+    it often misses the cached entry and, without an API key, returns <code>401</code>. Always send it.
   </p>
 
   <h2>Trim whitespace from input</h2>
@@ -53,10 +54,10 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
     whitespace before you send can still improve cache hit rates:
   </p>
   <pre><code class="language-javascript">{`// Before
-song = "  Shape of You  "
+song = "  E85  "
 
 // After
-song = song.trim() // "Shape of You"`}</code></pre>
+song = song.trim() // "E85"`}</code></pre>
 
   <h2>Implement client-side caching</h2>
   <p>
@@ -64,14 +65,14 @@ song = song.trim() // "Shape of You"`}</code></pre>
   </p>
   <pre><code class="language-javascript">{`const lyricsCache = new Map();
 
-async function getLyrics(song, artist, duration) {
-  const key = \`\${song.toLowerCase()}|\${artist.toLowerCase()}|\${duration || ''}\`;
+async function getLyrics(song, artist, album, duration) {
+  const key = \`\${song.toLowerCase()}|\${artist.toLowerCase()}|\${album.toLowerCase()}|\${duration}\`;
 
   if (lyricsCache.has(key)) {
     return lyricsCache.get(key);
   }
 
-  const result = await fetchFromAPI(song, artist, duration);
+  const result = await fetchFromAPI(song, artist, album, duration);
   lyricsCache.set(key, result);
 
   return result;
@@ -117,7 +118,7 @@ async function prefetchPlaylist(playlist, currentIndex) {
 
   for (const track of toFetch) {
     // Stagger requests to avoid bursts
-    await fetchLyrics(track.song, track.artist, track.duration);
+    await fetchLyrics(track.song, track.artist, track.album, track.duration);
     await sleep(200);
   }
 }`}</code></pre>

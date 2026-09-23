@@ -33,12 +33,12 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
   <ul>
     <li>All text is converted to lowercase</li>
     <li>Leading/trailing whitespace is trimmed</li>
-    <li>Album and duration are left out when they are not sent. They are optional but improve cache hit rates</li>
+    <li>Album and duration are part of the key, so always send them. A request without them builds a shorter key that often misses the cached entry and, without an API key, returns <code>401</code></li>
     <li><code>/getLyrics</code> also accepts a cached entry whose duration differs by a small amount. The provider-specific endpoints need an exact match</li>
   </ul>
   <p>
-    For example, searching for "Shape of You" by "Ed Sheeran" and "shape of you" by "ed sheeran"
-    hit the same cache entry.
+    For example, searching for "E85" by "Don Toliver" on "OCTANE" and "e85" by "don toliver" on "octane",
+    both with duration 154, hit the same cache entry: <code>ttml_lyrics:e85 don toliver octane 154s</code>.
   </p>
 
   <h2>Cache status header</h2>
@@ -80,8 +80,7 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
     <li>Makes cache keys more specific, so there are fewer false positives</li>
   </ul>
   <p>
-    If your application has access to track duration (e.g., from a music player),
-    always include it in your requests.
+    Always send the duration, together with the album, in every request.
   </p>
 
   <h2>Cache fallback behavior</h2>
@@ -103,15 +102,15 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
   </p>
   <CodeTabs tabs={[
     { language: 'curl', code: `curl -H "X-API-Key: your-api-key" \\
-  "https://api.betterlyrics.org/revalidate?s=Song&a=Artist"` },
-    { language: 'javascript', code: `const res = await fetch("https://api.betterlyrics.org/revalidate?s=Song&a=Artist", {
+  "https://api.betterlyrics.org/revalidate?s=E85&a=Don%20Toliver&al=OCTANE&d=154"` },
+    { language: 'javascript', code: `const res = await fetch("https://api.betterlyrics.org/revalidate?s=E85&a=Don%20Toliver&al=OCTANE&d=154", {
   headers: { "X-API-Key": "your-api-key" },
 });
 const data = await res.json();` },
     { language: 'python', code: `import requests
 
 res = requests.get(
-    "https://api.betterlyrics.org/revalidate?s=Song&a=Artist",
+    "https://api.betterlyrics.org/revalidate?s=E85&a=Don%20Toliver&al=OCTANE&d=154",
     headers={"X-API-Key": "your-api-key"},
 )
 data = res.json()` },
@@ -124,7 +123,7 @@ import (
 )
 
 func main() {
-	req, err := http.NewRequest(http.MethodGet, "https://api.betterlyrics.org/revalidate?s=Song&a=Artist", nil)
+	req, err := http.NewRequest(http.MethodGet, "https://api.betterlyrics.org/revalidate?s=E85&a=Don%20Toliver&al=OCTANE&d=154", nil)
 	if err != nil {
 		panic(err)
 	}
@@ -158,7 +157,7 @@ func main() {
   </p>
   <ul>
     <li>Cache successful responses locally for the session or longer</li>
-    <li>Use the song+artist+duration as your local cache key</li>
+    <li>Use the song, artist, album and duration as your local cache key</li>
     <li>Respect <code>NEGATIVE_HIT</code>: don't retry songs without lyrics right away</li>
   </ul>
 </DocsLayout>

@@ -57,15 +57,15 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
   <p>Pass your API key in the <code>X-API-Key</code> header:</p>
   <CodeTabs tabs={[
     { language: 'curl', code: `curl -H "X-API-Key: your-api-key" \\
-  "https://api.betterlyrics.org/getLyrics?s=Song&a=Artist"` },
-    { language: 'javascript', code: `const res = await fetch("https://api.betterlyrics.org/getLyrics?s=Song&a=Artist", {
+  "https://api.betterlyrics.org/getLyrics?s=E85&a=Don%20Toliver&al=OCTANE&d=154"` },
+    { language: 'javascript', code: `const res = await fetch("https://api.betterlyrics.org/getLyrics?s=E85&a=Don%20Toliver&al=OCTANE&d=154", {
   headers: { "X-API-Key": "your-api-key" },
 });
 const data = await res.json();` },
     { language: 'python', code: `import requests
 
 res = requests.get(
-    "https://api.betterlyrics.org/getLyrics?s=Song&a=Artist",
+    "https://api.betterlyrics.org/getLyrics?s=E85&a=Don%20Toliver&al=OCTANE&d=154",
     headers={"X-API-Key": "your-api-key"},
 )
 data = res.json()` },
@@ -78,7 +78,7 @@ import (
 )
 
 func main() {
-	req, err := http.NewRequest(http.MethodGet, "https://api.betterlyrics.org/getLyrics?s=Song&a=Artist", nil)
+	req, err := http.NewRequest(http.MethodGet, "https://api.betterlyrics.org/getLyrics?s=E85&a=Don%20Toliver&al=OCTANE&d=154", nil)
 	if err != nil {
 		panic(err)
 	}
@@ -148,7 +148,9 @@ func main() {
 
   <h2 id="loading-uncached-songs">Loading uncached songs</h2>
   <p>
-    If a song you need isn't cached, play it once with the
+    First check that your request sends all four parameters: the cache key includes album and duration,
+    so a request without them often misses an entry that is already cached. If a song you need still isn't
+    cached, play it once with the
     <a href="https://better-lyrics.boidu.dev" target="_blank" rel="noopener noreferrer">Better Lyrics</a>
     extension installed. The extension fetches lyrics through the same upstream
     the API uses, so after that one playback the response is cached and any

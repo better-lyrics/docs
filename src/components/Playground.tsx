@@ -292,7 +292,7 @@ export default function Playground() {
         <div className="input-row">
           <div className="input-group">
             <label htmlFor="song">Song</label>
-            <input id="song" type="text" value={song} onChange={(e) => update({ song: e.target.value })} placeholder="No Idea" />
+            <input id="song" type="text" value={song} onChange={(e) => update({ song: e.target.value })} placeholder="E85" />
           </div>
           <div className="input-group">
             <label htmlFor="artist">Artist</label>
@@ -302,11 +302,11 @@ export default function Playground() {
 
         <div className="input-row">
           <div className="input-group">
-            <label htmlFor="album">Album (optional)</label>
-            <input id="album" type="text" value={album} onChange={(e) => update({ album: e.target.value })} placeholder="Heaven Or Hell" />
+            <label htmlFor="album">Album</label>
+            <input id="album" type="text" value={album} onChange={(e) => update({ album: e.target.value })} placeholder="OCTANE" />
           </div>
           <div className="input-group">
-            <label htmlFor="duration">Duration in seconds (optional)</label>
+            <label htmlFor="duration">Duration in seconds</label>
             <input id="duration" type="number" value={duration} onChange={(e) => update({ duration: e.target.value })} placeholder="154" />
           </div>
         </div>

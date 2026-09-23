@@ -17,12 +17,12 @@ import DocsLayout from '../layouts/DocsLayout.astro';
   <h2>Quick start</h2>
   <p>Fetch lyrics for a song with a single GET request:</p>
   <CodeTabs tabs={[
-    { language: 'curl', code: `curl "https://api.betterlyrics.org/getLyrics?s=Shape%20of%20You&a=Ed%20Sheeran"` },
-    { language: 'javascript', code: `const res = await fetch("https://api.betterlyrics.org/getLyrics?s=Shape%20of%20You&a=Ed%20Sheeran");
+    { language: 'curl', code: `curl "https://api.betterlyrics.org/getLyrics?s=E85&a=Don%20Toliver&al=OCTANE&d=154"` },
+    { language: 'javascript', code: `const res = await fetch("https://api.betterlyrics.org/getLyrics?s=E85&a=Don%20Toliver&al=OCTANE&d=154");
 const { ttml } = await res.json();` },
     { language: 'python', code: `import requests
 
-res = requests.get("https://api.betterlyrics.org/getLyrics?s=Shape%20of%20You&a=Ed%20Sheeran")
+res = requests.get("https://api.betterlyrics.org/getLyrics?s=E85&a=Don%20Toliver&al=OCTANE&d=154")
 ttml = res.json()["ttml"]` },
     { language: 'go', code: `package main
 
@@ -33,7 +33,7 @@ import (
 )
 
 func main() {
-	res, err := http.Get("https://api.betterlyrics.org/getLyrics?s=Shape%20of%20You&a=Ed%20Sheeran")
+	res, err := http.Get("https://api.betterlyrics.org/getLyrics?s=E85&a=Don%20Toliver&al=OCTANE&d=154")
 	if err != nil {
 		panic(err)
 	}
@@ -59,26 +59,31 @@ func main() {
     <tbody>
       <tr>
         <td><code>s</code>, <code>song</code>, or <code>songName</code></td>
-        <td>At least one of song or artist</td>
+        <td>Always send</td>
         <td>The song title</td>
       </tr>
       <tr>
         <td><code>a</code>, <code>artist</code>, or <code>artistName</code></td>
-        <td>At least one of song or artist</td>
+        <td>Always send</td>
         <td>The artist name</td>
       </tr>
       <tr>
         <td><code>al</code>, <code>album</code>, or <code>albumName</code></td>
-        <td>No</td>
-        <td>Album name (improves matching accuracy)</td>
+        <td>Always send</td>
+        <td>The album name</td>
       </tr>
       <tr>
         <td><code>d</code> or <code>duration</code></td>
-        <td>No</td>
-        <td>Track duration in whole seconds (improves matching accuracy)</td>
+        <td>Always send</td>
+        <td>Track duration in whole seconds</td>
       </tr>
     </tbody>
   </table>
+  <p class="note">
+    The API rejects a request (<code>422</code>) only when both song and artist are missing. Send all four
+    anyway: the cache key includes album and duration, so a request without them often misses the cached
+    entry and, without an API key, returns <code>401</code>.
+  </p>
 
   <h3>Response</h3>
   <p>A successful response contains TTML (Timed Text Markup Language) with syllable-level timing:</p>

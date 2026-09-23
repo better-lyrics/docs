@@ -136,15 +136,19 @@ func main() {
       </tr>
       <tr>
         <td><code>al</code>, <code>album</code>, <code>albumName</code></td>
-        <td>Album name (optional)</td>
+        <td>Album name. Always send it</td>
       </tr>
       <tr>
         <td><code>d</code>, <code>duration</code></td>
-        <td>Duration in whole seconds (optional)</td>
+        <td>Duration in whole seconds. Always send it</td>
       </tr>
     </tbody>
   </table>
-  <p>Send at least one of song or artist. Otherwise the response is <code>400</code>:</p>
+  <p>
+    Send all four: the cache keys include album and duration, so a lookup without them checks a different key
+    than the one your lyrics requests use. The API rejects a request with <code>400</code> only when both song and
+    artist are missing:
+  </p>
   <pre><code class="language-json">{`{
   "error": "Provide at least song (s) or artist (a) parameter"
 }`}</code></pre>
@@ -152,15 +156,15 @@ func main() {
   <h3>Example</h3>
   <CodeTabs tabs={[
     { language: 'curl', code: `curl -H "Authorization: token" \\
-  "https://api.betterlyrics.org/cache/lookup?s=Shape%20of%20You&a=Ed%20Sheeran"` },
-    { language: 'javascript', code: `const res = await fetch("https://api.betterlyrics.org/cache/lookup?s=Shape%20of%20You&a=Ed%20Sheeran", {
+  "https://api.betterlyrics.org/cache/lookup?s=E85&a=Don%20Toliver&al=OCTANE&d=154"` },
+    { language: 'javascript', code: `const res = await fetch("https://api.betterlyrics.org/cache/lookup?s=E85&a=Don%20Toliver&al=OCTANE&d=154", {
   headers: { "Authorization": "token" },
 });
 const data = await res.json();` },
     { language: 'python', code: `import requests
 
 res = requests.get(
-    "https://api.betterlyrics.org/cache/lookup?s=Shape%20of%20You&a=Ed%20Sheeran",
+    "https://api.betterlyrics.org/cache/lookup?s=E85&a=Don%20Toliver&al=OCTANE&d=154",
     headers={"Authorization": "token"},
 )
 data = res.json()` },
@@ -173,7 +177,7 @@ import (
 )
 
 func main() {
-	req, err := http.NewRequest(http.MethodGet, "https://api.betterlyrics.org/cache/lookup?s=Shape%20of%20You&a=Ed%20Sheeran", nil)
+	req, err := http.NewRequest(http.MethodGet, "https://api.betterlyrics.org/cache/lookup?s=E85&a=Don%20Toliver&al=OCTANE&d=154", nil)
 	if err != nil {
 		panic(err)
 	}
@@ -195,21 +199,21 @@ func main() {
 
   <pre><code class="language-json">{`{
   "query": {
-    "song": "Shape of You",
-    "artist": "Ed Sheeran",
-    "album": "",
-    "duration": ""
+    "song": "E85",
+    "artist": "Don Toliver",
+    "album": "OCTANE",
+    "duration": "154"
   },
-  "normalized_key": "ttml_lyrics:shape of you ed sheeran",
-  "legacy_key": "ttml_lyrics:Shape of You Ed Sheeran ",
+  "normalized_key": "ttml_lyrics:e85 don toliver octane 154s",
+  "legacy_key": "ttml_lyrics:E85 Don Toliver OCTANE 154s",
   "keys_differ": true,
   "found": true,
   "found_in": "normalized",
-  "track_duration_ms": 233712,
+  "track_duration_ms": 153181,
   "score": 0.97,
   "language": "en",
   "isRTL": false,
-  "ttml_length": 45678,
+  "ttml_length": 17060,
   "ttml_preview": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\"?>..."
 }`}</code></pre>
 
@@ -404,15 +408,15 @@ func main() {
   <h3>Example</h3>
   <CodeTabs tabs={[
     { language: 'curl', code: `curl -H "Authorization: token" \\
-  "https://api.betterlyrics.org/cache/debug?key=ttml_lyrics:shape%20of%20you%20ed%20sheeran"` },
-    { language: 'javascript', code: `const res = await fetch("https://api.betterlyrics.org/cache/debug?key=ttml_lyrics:shape%20of%20you%20ed%20sheeran", {
+  "https://api.betterlyrics.org/cache/debug?key=ttml_lyrics:e85%20don%20toliver%20octane%20154s"` },
+    { language: 'javascript', code: `const res = await fetch("https://api.betterlyrics.org/cache/debug?key=ttml_lyrics:e85%20don%20toliver%20octane%20154s", {
   headers: { "Authorization": "token" },
 });
 const data = await res.json();` },
     { language: 'python', code: `import requests
 
 res = requests.get(
-    "https://api.betterlyrics.org/cache/debug?key=ttml_lyrics:shape%20of%20you%20ed%20sheeran",
+    "https://api.betterlyrics.org/cache/debug?key=ttml_lyrics:e85%20don%20toliver%20octane%20154s",
     headers={"Authorization": "token"},
 )
 data = res.json()` },
@@ -425,7 +429,7 @@ import (
 )
 
 func main() {
-	req, err := http.NewRequest(http.MethodGet, "https://api.betterlyrics.org/cache/debug?key=ttml_lyrics:shape%20of%20you%20ed%20sheeran", nil)
+	req, err := http.NewRequest(http.MethodGet, "https://api.betterlyrics.org/cache/debug?key=ttml_lyrics:e85%20don%20toliver%20octane%20154s", nil)
 	if err != nil {
 		panic(err)
 	}
@@ -446,14 +450,14 @@ func main() {
   ]} />
 
   <pre><code class="language-json">{`{
-  "key": "ttml_lyrics:shape of you ed sheeran",
+  "key": "ttml_lyrics:e85 don toliver octane 154s",
   "found": true,
   "type": "lyrics",
-  "track_duration_ms": 233712,
+  "track_duration_ms": 153181,
   "score": 0.97,
   "language": "en",
   "isRTL": false,
-  "ttml_length": 45678,
+  "ttml_length": 17060,
   "ttml_preview": "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\"?>..."
 }`}</code></pre>
 

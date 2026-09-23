@@ -123,15 +123,15 @@ import DocsLayout from '../../layouts/DocsLayout.astro';
   </p>
   <CodeTabs tabs={[
     { language: 'curl', code: `curl -H "X-API-Key: your-api-key" \\
-  "https://api.betterlyrics.org/getLyrics?s=Song&a=Artist"` },
-    { language: 'javascript', code: `const res = await fetch("https://api.betterlyrics.org/getLyrics?s=Song&a=Artist", {
+  "https://api.betterlyrics.org/getLyrics?s=E85&a=Don%20Toliver&al=OCTANE&d=154"` },
+    { language: 'javascript', code: `const res = await fetch("https://api.betterlyrics.org/getLyrics?s=E85&a=Don%20Toliver&al=OCTANE&d=154", {
   headers: { "X-API-Key": "your-api-key" },
 });
 const data = await res.json();` },
     { language: 'python', code: `import requests
 
 res = requests.get(
-    "https://api.betterlyrics.org/getLyrics?s=Song&a=Artist",
+    "https://api.betterlyrics.org/getLyrics?s=E85&a=Don%20Toliver&al=OCTANE&d=154",
     headers={"X-API-Key": "your-api-key"},
 )
 data = res.json()` },
@@ -144,7 +144,7 @@ import (
 )
 
 func main() {
-	req, err := http.NewRequest(http.MethodGet, "https://api.betterlyrics.org/getLyrics?s=Song&a=Artist", nil)
+	req, err := http.NewRequest(http.MethodGet, "https://api.betterlyrics.org/getLyrics?s=E85&a=Don%20Toliver&al=OCTANE&d=154", nil)
 	if err != nil {
 		panic(err)
 	}
