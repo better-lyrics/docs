@@ -6,11 +6,11 @@ export interface NavLink {
 
 export const headerLinks = [
   { href: '/', label: 'Docs', match: (path: string) => path === '/' || path.startsWith('/docs') },
-  { href: '/braccato', label: 'Braccato', match: (path: string) => path.startsWith('/braccato') || path === '/changelog' },
+  { href: '/braccato', label: 'Braccato', match: (path: string) => path.startsWith('/braccato') },
   { href: '/unison', label: 'Unison', match: (path: string) => path === '/unison' },
   { href: '/theming', label: 'Theming', match: (path: string) => path.startsWith('/theming') },
   { href: '/playground', label: 'Playground', match: (path: string) => path === '/playground' },
-  { href: '/reference/get-lyrics', label: 'Reference', match: (path: string) => path.startsWith('/reference') },
+  { href: '/reference/get-lyrics', label: 'Reference', match: (path: string) => path.startsWith('/reference') || path === '/changelog' },
 ];
 
 export interface NavSection {
@@ -37,6 +37,7 @@ const referenceLinks: NavLink[] = [
   { href: '/reference/health', label: 'GET /health', description: 'Reference for GET /health: check that the Better Lyrics API is up and serving requests.' },
   { href: '/reference/cache-endpoints', label: 'Cache endpoints', description: 'Reference for the admin cache endpoints: lookup, keys, debug and clear, plus the removed backup endpoints.' },
   { href: '/reference/openapi', label: 'OpenAPI spec', description: 'The OpenAPI 3.1 document for the Better Lyrics API, and every endpoint it describes.' },
+  { href: '/changelog', label: 'Changelog', description: 'Notable changes to the Better Lyrics API and the Braccato packages.' },
 ];
 
 export const navSections: NavSection[] = [
@@ -48,7 +49,6 @@ export const navSections: NavSection[] = [
       { href: '/braccato/parsers', label: 'Parsers', description: 'Parse TTML, LRC and QRC responses from every Better Lyrics API provider into one shape with @braccato/parsers.' },
       { href: '/braccato/renderer', label: 'Renderer', description: 'Render synced lyrics with the <braccato-lyrics> custom element from @braccato/core: properties, events, scrolling and theming.' },
       { href: '/braccato/provider', label: 'Provider', description: 'Fetch lyrics from several providers with fallback using @braccato/provider-blyrics.' },
-      { href: '/changelog', label: 'Changelog', description: 'Notable changes to the Better Lyrics API and the Braccato packages.' },
     ],
   },
   {
