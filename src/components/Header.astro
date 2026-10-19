@@ -30,7 +30,7 @@ const currentPath = currentPathOf(Astro.url);
     top: 0;
     z-index: 100;
     height: var(--header-height);
-    background-color: rgba(15, 14, 19, 0.8);
+    background-color: color-mix(in srgb, var(--bg-primary) 80%, transparent);
     backdrop-filter: blur(8px);
     border-bottom: 1px solid var(--border);
   }

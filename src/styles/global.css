@@ -1,30 +1,137 @@
 /* Better Lyrics API Documentation - Design Tokens (shared with Unison) */
+:root {
+  color-scheme: light dark;
 
+  /* each color - light-dark(light, dark) */
+  --bg-primary: light-dark(oklch(98.5% 0.006 294.412), #0f0e13);
+  --bg-secondary: light-dark(oklch(95.5% 0.007 294.412), #141316);
+  --bg-tertiary: light-dark(oklch(0% 0.0105 294.412 / 0.06), rgba(255, 255, 255, 0.06));
+  --text-primary: light-dark(oklch(20% 0.006 286.35), #f5f5f7);
+  --text-secondary: light-dark(oklch(36% 0.006 286.35), rgba(245, 245, 247, 0.72));
+  --text-muted: light-dark(oklch(48% 0.006 286.35), rgba(245, 245, 247, 0.48));
+  --accent: light-dark(oklch(50% 0.22 23.583), #f20c32);
+  --border: light-dark(oklch(0% 0.0105 294.412 / 0.1), rgba(255, 255, 255, 0.1));
+  --border-subtle: light-dark(oklch(0% 0.0105 294.412 / 0.05), rgba(255, 255, 255, 0.05));
+  --border-hover: light-dark(oklch(0% 0.0105 294.412 / 0.18), rgba(255, 255, 255, 0.18));
+  --success: light-dark(oklch(45% 0.15 150), #22c55e);
+  --warning: light-dark(oklch(52% 0.14 70), #f5a623);
+  --error: light-dark(oklch(45% 0.2 330), #ef4444);
+  --shadow-key: light-dark(oklch(0% 0 0 / 0.15), rgba(0, 0, 0, 0.3));
+  --surface-panel: light-dark(oklch(0% 0.0105 294.412 / 0.02), rgba(255, 255, 255, 0.02));
+  --surface-code: light-dark(#121115, #121115);
+  --surface-inline-code: light-dark(oklch(0% 0.0105 294.412 / 0.06), rgba(20, 19, 22, 0.6));
+  --surface-hover: light-dark(oklch(0% 0.0105 294.412 / 0.08), rgba(255, 255, 255, 0.12));
+  --glow: light-dark(oklch(100% 0 0 / 0.1), rgba(255, 255, 255, 0.1));
+  --scrollbar-hover: light-dark(oklch(0% 0 0 / 0.28), rgba(255, 255, 255, 0.28));
+  --tint-success: light-dark(oklch(45% 0.15 150 / 0.1), rgba(34, 197, 94, 0.1));
+  --tint-warning: light-dark(oklch(52% 0.14 70 / 0.1), rgba(245, 158, 11, 0.1));
+  --tint-error: light-dark(oklch(45% 0.2 330 / 0.1), rgba(239, 68, 68, 0.1));
+}
+
+/* Fallback for light-dark() (browsers before 2024). Suggestion is to remove. */
+@supports not (color: light-dark(#000, #fff)) {
+@media (prefers-color-scheme: light) {
+:root {
+  color-scheme: light;
+  --bg-primary: oklch(98.254% 0.0056 84.442);
+  --bg-secondary: oklch(95.5% 0.0056 84.442);
+  --bg-tertiary: oklch(0% 0.0056 84.442 / 0.06);
+  --text-primary: oklch(18% 0.0056 84.442);
+  --text-secondary: oklch(34% 0.0056 84.442);
+  --text-muted: oklch(46% 0.0056 84.442);
+  --accent: oklch(50% 0.22 25);
+  --border: oklch(0% 0.0056 84.442 / 0.1);
+  --border-subtle: oklch(0% 0.0056 84.442 / 0.05);
+  --border-hover: oklch(0% 0.0056 84.442 / 0.18);
+  --success: oklch(45% 0.15 150);
+  --warning: oklch(52% 0.14 70);
+  --error: oklch(45% 0.2 330);
+  --shadow-key: oklch(0% 0 0 / 0.15);
+  --surface-panel: oklch(0% 0.0056 84.442 / 0.02);
+  --surface-code: #121115;
+  --surface-inline-code: oklch(0% 0.0056 84.442 / 0.06);
+  --surface-hover: oklch(0% 0 0 / 0.08);
+  --glow: oklch(100% 0 0 / 0.1);
+  --scrollbar-hover: oklch(0% 0 0 / 0.28);
+  --tint-success: oklch(45% 0.15 150 / 0.1);
+  --tint-warning: oklch(52% 0.14 70 / 0.1);
+  --tint-error: oklch(45% 0.2 330 / 0.1);
+}
+}
+@media (prefers-color-scheme: dark) {
 :root {
   color-scheme: dark;
-
-  /* Colors */
   --bg-primary: #0f0e13;
   --bg-secondary: #141316;
   --bg-tertiary: rgba(255, 255, 255, 0.06);
-
   --text-primary: #f5f5f7;
   --text-secondary: rgba(245, 245, 247, 0.72);
   --text-muted: rgba(245, 245, 247, 0.48);
-
   --accent: #f20c32;
-
   --border: rgba(255, 255, 255, 0.1);
   --border-subtle: rgba(255, 255, 255, 0.05);
   --border-hover: rgba(255, 255, 255, 0.18);
-
   --success: #22c55e;
   --warning: #f5a623;
   --error: #ef4444;
-
-  --code-text: #d6deeb;
+  --shadow-key: rgba(0, 0, 0, 0.3);
   --surface-panel: rgba(255, 255, 255, 0.02);
-  --surface-code: rgba(20, 19, 22, 0.5);
+  --surface-code: #121115;
+  --surface-inline-code: rgba(20, 19, 22, 0.6);
+  --surface-hover: rgba(255, 255, 255, 0.12);
+  --glow: rgba(255, 255, 255, 0.1);
+  --scrollbar-hover: rgba(255, 255, 255, 0.28);
+  --tint-success: rgba(34, 197, 94, 0.1);
+  --tint-warning: rgba(245, 158, 11, 0.1);
+  --tint-error: rgba(239, 68, 68, 0.1);
+}
+}
+
+/* Code elements outside pre need theme-dark to be dark in light mode */
+.theme-dark, pre {
+  color-scheme: dark;
+  --bg-primary: #0f0e13;
+  --bg-secondary: #141316;
+  --bg-tertiary: rgba(255, 255, 255, 0.06);
+  --text-primary: #f5f5f7;
+  --text-secondary: rgba(245, 245, 247, 0.72);
+  --text-muted: rgba(245, 245, 247, 0.48);
+  --accent: #f20c32;
+  --border: rgba(255, 255, 255, 0.1);
+  --border-subtle: rgba(255, 255, 255, 0.05);
+  --border-hover: rgba(255, 255, 255, 0.18);
+  --success: #22c55e;
+  --warning: #f5a623;
+  --error: #ef4444;
+  --shadow-key: rgba(0, 0, 0, 0.3);
+  --surface-panel: rgba(255, 255, 255, 0.02);
+  --surface-code: #121115;
+  --surface-inline-code: rgba(20, 19, 22, 0.6);
+  --surface-hover: rgba(255, 255, 255, 0.12);
+  --glow: rgba(255, 255, 255, 0.1);
+  --scrollbar-hover: rgba(255, 255, 255, 0.28);
+  --tint-success: rgba(34, 197, 94, 0.1);
+  --tint-warning: rgba(245, 158, 11, 0.1);
+  --tint-error: rgba(239, 68, 68, 0.1);
+}
+}
+
+:root{
+  /* Code (Night Owl palette, same in both themes) */
+  --code-text: #d6deeb;
+  --ink-on-dark: #f5f5f7;
+  --code-comment: #637777;
+  --code-punctuation: #c792ea;
+  --code-property: #7fdbca;
+  --code-number: #f78c6c;
+  --code-string: #addb67;
+  --code-function: #82aaff;
+  --code-keyword: #c792ea;
+  --code-highlight: #ecc48d;
+
+  /* Overlays, same in both themes) */
+  --scrim: oklch(0% 0 0 / 0.6);
+  --shadow-lift: oklch(0% 0 0 / 0.5);
 
   /* Typography */
   --font-sans: 'Satoshi', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
@@ -130,7 +237,7 @@ code {
   font-family: var(--font-mono);
   font-size: 0.85em;
   color: var(--text-primary);
-  background-color: rgba(20, 19, 22, 0.6);
+  background-color: var(--surface-inline-code);
   padding: 0.125rem 0.25rem;
   border-radius: var(--radius-sm);
 }
@@ -264,7 +371,7 @@ kbd {
   padding: 0 0.25rem;
   border-radius: var(--radius-sm);
   background-color: color-mix(in srgb, currentColor 10%, transparent);
-  box-shadow: 0 2px 0 0 rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 0 0 var(--shadow-key);
   font-family: var(--font-sans);
   font-size: 10px;
   font-weight: 500;
@@ -362,7 +469,7 @@ kbd svg {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.28);
+  background: var(--scrollbar-hover);
 }
 
 ::selection {
@@ -370,7 +477,7 @@ kbd svg {
   color: var(--text-primary);
 }
 
-/* Prism tokens, night owl palette to match Unison */
+/* Prism tokens, Night Owl palette colors */
 code[class*="language-"] {
   font-family: var(--font-mono);
   text-shadow: none;
@@ -389,12 +496,12 @@ code[class*="language-"] {
 .token.prolog,
 .token.doctype,
 .token.cdata {
-  color: #637777;
+  color: var(--code-comment);
   font-style: italic;
 }
 
 .token.punctuation {
-  color: #c792ea;
+  color: var(--code-punctuation);
 }
 
 .token.property,
@@ -402,12 +509,12 @@ code[class*="language-"] {
 .token.constant,
 .token.symbol,
 .token.deleted {
-  color: #7fdbca;
+  color: var(--code-property);
 }
 
 .token.boolean,
 .token.number {
-  color: #f78c6c;
+  color: var(--code-number);
 }
 
 .token.selector,
@@ -416,28 +523,40 @@ code[class*="language-"] {
 .token.char,
 .token.builtin,
 .token.inserted {
-  color: #addb67;
+  color: var(--code-string);
 }
 
 .token.operator,
 .token.entity,
 .token.url,
 .token.variable {
-  color: #c792ea;
+  color: var(--code-punctuation);
 }
 
 .token.atrule,
 .token.attr-value,
 .token.function,
 .token.class-name {
-  color: #82aaff;
+  color: var(--code-function);
 }
 
 .token.keyword {
-  color: #c792ea;
+  color: var(--code-keyword);
 }
 
 .token.regex,
 .token.important {
-  color: #ecc48d;
+  color: var(--code-highlight);
+}
+
+
+/* Code elements outside pre need theme-dark to stay dark in light mode */
+.theme-dark, pre {
+  color-scheme: dark;
+}
+
+/* Fixed color: var(--text-primary) resolves to the light-theme value inside ::selection */
+pre::selection, pre *::selection,
+.theme-dark::selection, .theme-dark *::selection {
+  color: var(--ink-on-dark);
 }

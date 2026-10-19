@@ -128,7 +128,7 @@ export default function LyricsPreview({ content, durationS }: LyricsPreviewProps
   }
 
   return (
-    <div className="preview">
+    <div className="preview theme-dark">
       <braccato-lyrics ref={elementRef} />
 
       <div className="preview-transport">
@@ -172,7 +172,7 @@ export default function LyricsPreview({ content, durationS }: LyricsPreviewProps
       </div>
 
       <style>{`
-        :root {
+        .preview {
           --blyrics-text-color: var(--text-primary);
           --blyrics-inactive-opacity: 0.2;
           --blyrics-font-size: 1.75rem;
@@ -224,7 +224,7 @@ export default function LyricsPreview({ content, durationS }: LyricsPreviewProps
         }
 
         .preview-play:hover {
-          background-color: rgba(255, 255, 255, 0.12);
+          background-color: var(--surface-hover);
         }
 
         .preview-play svg {

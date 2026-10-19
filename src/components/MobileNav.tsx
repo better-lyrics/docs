@@ -138,7 +138,7 @@ export default function MobileNav({ currentPath }: Props) {
         .mobile-nav-backdrop {
           position: fixed;
           inset: 0;
-          background-color: rgba(0, 0, 0, 0.6);
+          background-color: var(--scrim);
           z-index: 200;
           animation: backdropFadeIn 0.2s ease-out forwards;
         }
