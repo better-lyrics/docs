@@ -1,6 +1,11 @@
 ---
 import { currentPathOf, headerLinks } from '../nav';
 
+const ICONS = {
+  sun: '<path d="M12 12m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0" /><path d="M3 12h1m8 -9v1m8 8h1m-9 8v1m-6.4 -15.4l.7 .7m12.1 -.7l-.7 .7m0 11.4l.7 .7m-12.1 -.7l-.7 .7" />',
+  moon: '<path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />',
+};
+
 const currentPath = currentPathOf(Astro.url);
 ---
 
@@ -21,8 +26,48 @@ const currentPath = currentPathOf(Astro.url);
         </a>
       ))}
     </nav>
+
+    <button type="button" class="theme-toggle" aria-label="Toggle color theme" data-theme-toggle>
+      <span class="morph" data-theme-icon>
+        <span data-morph="light" data-active="false" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" set:html={ICONS.sun} /></span>
+        <span data-morph="dark" data-active="true"><svg viewBox="0 0 24 24" aria-hidden="true" set:html={ICONS.moon} /></span>
+      </span>
+    </button>
   </div>
 </header>
+
+<script>
+  import { morphTo } from '../morph';
+  import { THEME_STORAGE_KEY, type Theme } from '../theme';
+
+  const toggle = document.querySelector<HTMLButtonElement>('[data-theme-toggle]');
+  const icon = document.querySelector<HTMLElement>('[data-theme-icon]');
+  const systemDark = window.matchMedia('(prefers-color-scheme: dark)');
+
+  const currentTheme = (): Theme => {
+    const chosen = document.documentElement.dataset.theme;
+    if (chosen === 'light' || chosen === 'dark') return chosen;
+    return systemDark.matches ? 'dark' : 'light';
+  };
+
+  const render = () => {
+    const theme = currentTheme();
+    if (icon) morphTo(icon, theme);
+    toggle?.setAttribute('aria-label', `Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`);
+  };
+
+  toggle?.addEventListener('click', () => {
+    const next: Theme = currentTheme() === 'dark' ? 'light' : 'dark';
+    document.documentElement.dataset.theme = next;
+    localStorage.setItem(THEME_STORAGE_KEY, next);
+    render();
+  });
+
+  systemDark.addEventListener('change', render);
+  render();
+  icon?.getBoundingClientRect();
+  icon?.setAttribute('data-ready', '');
+</script>
 
 <style>
   .header {
@@ -30,7 +75,7 @@ const currentPath = currentPathOf(Astro.url);
     top: 0;
     z-index: 100;
     height: var(--header-height);
-    background-color: rgba(15, 14, 19, 0.8);
+    background-color: color-mix(in srgb, var(--bg-primary) 80%, transparent);
     backdrop-filter: blur(8px);
     border-bottom: 1px solid var(--border);
   }
@@ -88,9 +133,54 @@ const currentPath = currentPathOf(Astro.url);
     background-color: var(--bg-secondary);
   }
 
+  .theme-toggle {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: none;
+    border-radius: var(--radius-md);
+    background: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: color var(--transition-fast), background-color var(--transition-fast);
+  }
+
+  .theme-toggle:hover {
+    color: var(--text-primary);
+    background-color: var(--bg-tertiary);
+  }
+
+  .theme-toggle .morph:not([data-ready]) > * {
+    transition: none;
+  }
+
+  .theme-toggle svg {
+    width: 0.875rem;
+    height: 0.875rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  @supports not (color: light-dark(#000, #fff)) {
+    .theme-toggle {
+      display: none;
+    }
+  }
+
   @media (max-width: 1024px) {
     .nav {
       display: none;
+    }
+
+    .theme-toggle {
+      margin-right: 40px;
     }
   }
 </style>

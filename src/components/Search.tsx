@@ -316,7 +316,7 @@ export default function Search() {
         .search-modal-backdrop {
           position: fixed;
           inset: 0;
-          background-color: rgba(0, 0, 0, 0.6);
+          background-color: var(--scrim);
           display: flex;
           align-items: flex-start;
           justify-content: center;
@@ -337,7 +337,7 @@ export default function Search() {
           background-color: var(--bg-secondary);
           border: 1px solid var(--border);
           border-radius: var(--radius-lg);
-          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+          box-shadow: 0 25px 50px -12px var(--shadow-lift);
           overflow: hidden;
           animation: slideIn 0.15s ease-out;
         }

@@ -1,4 +1,6 @@
 ---
+import { THEME_STORAGE_KEY } from '../theme';
+
 interface Props {
   title: string;
   description?: string;
@@ -29,7 +31,8 @@ const pageTitle = Astro.url.pathname === '/' ? 'Better Lyrics API Documentation'
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:title" content={pageTitle} />
     <meta name="twitter:description" content={description} />
-    <meta name="theme-color" content="#0f0e13" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#faf9fe" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0f0e13" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="preconnect" href="https://api.fontshare.com" crossorigin />
     <link rel="preconnect" href="https://cdn.fontshare.com" crossorigin />
@@ -38,6 +41,10 @@ const pageTitle = Astro.url.pathname === '/' ? 'Better Lyrics API Documentation'
     <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,600,700&display=swap" />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" />
     <title>{pageTitle}</title>
+    <script is:inline define:vars={{ themeStorageKey: THEME_STORAGE_KEY }}>
+      const savedTheme = localStorage.getItem(themeStorageKey);
+      if (savedTheme === 'light' || savedTheme === 'dark') document.documentElement.dataset.theme = savedTheme;
+    </script>
   </head>
   <body>
     <slot />

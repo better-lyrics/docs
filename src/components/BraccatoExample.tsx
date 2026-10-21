@@ -203,7 +203,7 @@ export default function BraccatoExample({
           width: 40rem;
           height: 30rem;
           transform: translate(-50%, -50%);
-          background: radial-gradient(closest-side, rgba(255, 255, 255, 0.1), transparent);
+          background: radial-gradient(closest-side, var(--glow), transparent);
           pointer-events: none;
         }
 
@@ -382,7 +382,7 @@ export default function BraccatoExample({
           grid-column: 2;
           margin: 0;
           padding: 0;
-          background-color: var(--bg-primary);
+          background-color: var(--surface-code);
           border: none;
           border-radius: var(--radius-lg);
           overflow: hidden;
