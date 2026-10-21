@@ -65,6 +65,8 @@ const currentPath = currentPathOf(Astro.url);
 
   systemDark.addEventListener('change', render);
   render();
+  icon?.getBoundingClientRect();
+  icon?.setAttribute('data-ready', '');
 </script>
 
 <style>
@@ -152,6 +154,10 @@ const currentPath = currentPathOf(Astro.url);
     background-color: var(--bg-tertiary);
   }
 
+  .theme-toggle .morph:not([data-ready]) > * {
+    transition: none;
+  }
+
   .theme-toggle svg {
     width: 0.875rem;
     height: 0.875rem;
@@ -160,6 +166,12 @@ const currentPath = currentPathOf(Astro.url);
     stroke-width: 1.5;
     stroke-linecap: round;
     stroke-linejoin: round;
+  }
+
+  @supports not (color: light-dark(#000, #fff)) {
+    .theme-toggle {
+      display: none;
+    }
   }
 
   @media (max-width: 1024px) {

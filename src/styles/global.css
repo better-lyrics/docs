@@ -46,7 +46,7 @@
   color-scheme: dark;
 }
 
-/* Fallback for light-dark() (browsers before 2024). Suggestion is to remove. */
+/* Fallback for light-dark() (browsers before 2024) */
 @supports not (color: light-dark(#000, #fff)) {
 @media (prefers-color-scheme: light) {
 :root {
