@@ -334,7 +334,7 @@ export default function Playground() {
       </form>
 
       {hasQuery && (
-        <div className="request-bar theme-dark">
+        <div className="request-bar">
           <span className="request-method">GET</span>
           <code className="request-url">{apiUrl}</code>
           {response && (
@@ -367,7 +367,7 @@ export default function Playground() {
       )}
 
       {response && (
-        <div className="output theme-dark">
+        <div className="output">
           <div className="output-tabs">
             <SegmentedControl variant="underline" ariaLabel="Output" options={outputTabs} value={activeTab} onChange={setTab} />
           </div>

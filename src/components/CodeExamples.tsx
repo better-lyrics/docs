@@ -222,7 +222,7 @@ client.newCall(request).execute().use { response ->
   };
 
   return (
-    <div className="code-examples theme-dark">
+    <div className="code-examples">
       <div className="tabs-header">
         <SegmentedControl
           variant="underline"

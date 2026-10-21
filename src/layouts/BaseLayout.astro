@@ -1,4 +1,6 @@
 ---
+import { THEME_STORAGE_KEY } from '../theme';
+
 interface Props {
   title: string;
   description?: string;
@@ -39,6 +41,10 @@ const pageTitle = Astro.url.pathname === '/' ? 'Better Lyrics API Documentation'
     <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,600,700&display=swap" />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" />
     <title>{pageTitle}</title>
+    <script is:inline define:vars={{ themeStorageKey: THEME_STORAGE_KEY }}>
+      const savedTheme = localStorage.getItem(themeStorageKey);
+      if (savedTheme === 'light' || savedTheme === 'dark') document.documentElement.dataset.theme = savedTheme;
+    </script>
   </head>
   <body>
     <slot />

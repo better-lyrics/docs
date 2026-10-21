@@ -128,7 +128,7 @@ export default function LyricsPreview({ content, durationS }: LyricsPreviewProps
   }
 
   return (
-    <div className="preview theme-dark">
+    <div className="preview">
       <braccato-lyrics ref={elementRef} />
 
       <div className="preview-transport">
@@ -173,8 +173,9 @@ export default function LyricsPreview({ content, durationS }: LyricsPreviewProps
 
       <style>{`
         .preview {
-          --blyrics-text-color: var(--text-primary);
-          --blyrics-inactive-opacity: 0.2;
+          --blyrics-ui-text-color: var(--text-primary);
+          --blyrics-lyric-active-color: var(--text-primary);
+          --blyrics-lyric-inactive-color: color-mix(in srgb, var(--text-primary) 20%, transparent);
           --blyrics-font-size: 1.75rem;
         }
 
