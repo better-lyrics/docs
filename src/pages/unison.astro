@@ -5,7 +5,9 @@ import type { CodeLanguage } from '../codeLanguages';
 
 const BASE_URL = 'https://unison.boidu.dev';
 const VIDEO_URL = `${BASE_URL}/lyrics?v=Ugr4KKK_SqY`;
+const SONG_ARTIST_URL = `${BASE_URL}/lyrics?song=Explorer&artist=Justice`;
 const ISRC_URL = `${BASE_URL}/lyrics?isrc=FR8EU2300090`;
+const PROVIDER_ID_URL = `${BASE_URL}/lyrics?apple_music=1724935872`;
 const SEARCH_URL = `${BASE_URL}/lyrics/search?q=explorer+justice`;
 const VARIANTS_URL = `${BASE_URL}/lyrics/variants/Ugr4KKK_SqY?limit=5`;
 
@@ -79,6 +81,28 @@ if (res.status === 304) {
 }`,
   },
 ];
+
+const PROVIDER_ID_RESPONSE = `{
+  "success": true,
+  "data": {
+    "id": 13529,
+    "videoId": "Ugr4KKK_SqY",
+    "song": "Explorer",
+    "artist": "Justice, Connan Mockasin",
+    "isrc": "FR8EU2300090",
+    "format": "ttml",
+    "syncType": "richsync",
+    "matchedBy": "isrc",
+    "lyrics": "<tt xmlns=\\"http://www.w3.org/ns/ttml\\"> ... </tt>"
+  }
+}`;
+
+const LOOKUP_PENDING_RESPONSE = `{
+  "success": false,
+  "error": "Lookup pending",
+  "code": "LOOKUP_PENDING",
+  "hint": "We're still matching this track. Try again in a few seconds."
+}`;
 
 const ERROR_RESPONSE = `{
   "success": false,
@@ -202,27 +226,45 @@ println!("{body}");` },
   </p>
   <pre><code class="language-json">{VIDEO_RESPONSE}</code></pre>
 
-  <h2>Other ways to look up</h2>
-  <p>No video id? <code>GET /lyrics</code> also takes:</p>
-  <ul>
-    <li><code>isrc</code>, in any case, with hyphens optional.</li>
-    <li>
-      <code>spotify</code>, <code>apple_music</code> or <code>tidal</code>, a track id rather than a link.
-      Unison resolves it to an ISRC through BiniLink.
-    </li>
-    <li>
-      <code>song</code> and <code>artist</code>. <code>artist</code> matches any one credited name. Add
-      <code>album</code> or <code>duration</code> (seconds, ±2 s) to narrow it.
-    </li>
-  </ul>
+  <h2>Fetch by song and artist</h2>
+  <p>
+    No video id? Look up by <code>song</code> and <code>artist</code> instead. Both are matched
+    case-insensitively, and <code>artist</code> only has to share one credited name, so sending just the
+    main artist works for a song with several. Add <code>album</code> or <code>duration</code> (seconds,
+    matched within a small tolerance) when a title has more than one recording.
+  </p>
+  <CodeTabs tabs={fetchTabs(SONG_ARTIST_URL)} />
+
+  <h2>Fetch by ISRC</h2>
+  <p>
+    <code>GET /lyrics?isrc=&lt;isrc&gt;</code> returns the best version for a recording. Case and hyphens
+    do not matter. Pass <code>song</code> and <code>artist</code> too and an unknown ISRC falls back to
+    them.
+  </p>
+  <CodeTabs tabs={fetchTabs(ISRC_URL)} />
+
+  <h2>Fetch by Spotify, Apple Music or Tidal id</h2>
+  <p>
+    <code>spotify</code>, <code>apple_music</code> and <code>tidal</code> take a track id, not a link.
+    Unison turns it into an ISRC with
+    <a href="https://link.binimum.org" target="_blank" rel="noopener noreferrer">BiniLink</a> and looks
+    that up. <code>matchedBy</code> in the response says how it matched. A <code>linked_video</code> match
+    can be a different release, so its timing may drift.
+  </p>
+  <p>
+    A lookup with a new id can return <code>503</code> with <code>Retry-After</code> while BiniLink is
+    still matching it or is down. Retry a few times, then give up.
+  </p>
+  <CodeTabs tabs={fetchTabs(PROVIDER_ID_URL)} />
+  <pre><code class="language-json">{PROVIDER_ID_RESPONSE}</code></pre>
+  <pre><code class="language-json">{LOOKUP_PENDING_RESPONSE}</code></pre>
+
+  <h2>Which lookup to use</h2>
   <p>
     Use <code>v</code> when you can: it's the fastest lookup. Without <code>v</code>, Unison falls back to
     <code>isrc</code>, then Spotify / Apple Music / Tidal id, then <code>song</code> + <code>artist</code>,
-    and returns the first match. The fallbacks can take longer to answer. Every lookup except
-    <code>v</code> says how it matched in <code>matchedBy</code>: <code>isrc</code>,
-    <code>song_artist</code> or <code>linked_video</code>.
+    and returns the first match. The fallbacks can take longer to answer.
   </p>
-  <CodeTabs tabs={fetchTabs(ISRC_URL)} />
 
   <h2>Search</h2>
   <p>
