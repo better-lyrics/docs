@@ -3,7 +3,7 @@ import CodeTabs from '../components/CodeTabs.astro';
 import DocsLayout from '../layouts/DocsLayout.astro';
 import type { CodeLanguage } from '../codeLanguages';
 
-const BASE_URL = 'https://unison.boidu.dev';
+const BASE_URL = 'https://unison.betterlyrics.org';
 const VIDEO_URL = `${BASE_URL}/lyrics?v=Ugr4KKK_SqY`;
 const SONG_ARTIST_URL = `${BASE_URL}/lyrics?song=Explorer&artist=Justice`;
 const ISRC_URL = `${BASE_URL}/lyrics?isrc=FR8EU2300090`;
@@ -114,7 +114,7 @@ const ERROR_RESPONSE = `{
 
 <DocsLayout title="Unison">
   <p>
-    <a href="https://unison.boidu.dev" target="_blank" rel="noopener noreferrer">Unison</a> is a public
+    <a href="https://unison.betterlyrics.org" target="_blank" rel="noopener noreferrer">Unison</a> is a public
     database of community-synced lyrics, the community-fed source Better Lyrics reads from. Each entry is
     keyed on a <code>videoId</code>. Reading from it needs no key and no sign-in. Every
     <code>/lyrics</code> response is wrapped as <code>{`{ success, data }`}</code>, so check
