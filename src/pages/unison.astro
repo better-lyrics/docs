@@ -4,11 +4,10 @@ import DocsLayout from '../layouts/DocsLayout.astro';
 import type { CodeLanguage } from '../codeLanguages';
 
 const BASE_URL = 'https://unison.boidu.dev';
-const VIDEO_URL = `${BASE_URL}/lyrics?v=dQw4w9WgXcQ`;
-const SONG_ARTIST_URL = `${BASE_URL}/lyrics?song=Never+Gonna+Give+You+Up&artist=Rick+Astley`;
-const SEARCH_URL = `${BASE_URL}/lyrics/search?q=never+gonna+give`;
-const VARIANTS_URL = `${BASE_URL}/lyrics/variants/dQw4w9WgXcQ?limit=5`;
-const TRANSLATE_URL = `${BASE_URL}/translate`;
+const VIDEO_URL = `${BASE_URL}/lyrics?v=Ugr4KKK_SqY`;
+const ISRC_URL = `${BASE_URL}/lyrics?isrc=FR8EU2300090`;
+const SEARCH_URL = `${BASE_URL}/lyrics/search?q=explorer+justice`;
+const VARIANTS_URL = `${BASE_URL}/lyrics/variants/Ugr4KKK_SqY?limit=5`;
 
 function fetchTabs(url: string): { language: CodeLanguage; code: string }[] {
   return [
@@ -26,12 +25,12 @@ function fetchTabs(url: string): { language: CodeLanguage; code: string }[] {
 const VIDEO_RESPONSE = `{
   "success": true,
   "data": {
-    "id": 4821,
-    "videoId": "dQw4w9WgXcQ",
-    "song": "Never Gonna Give You Up",
-    "artist": "Rick Astley",
-    "album": "Whenever You Need Somebody",
-    "duration": 213,
+    "id": 13529,
+    "videoId": "Ugr4KKK_SqY",
+    "song": "Explorer",
+    "artist": "Justice, Connan Mockasin",
+    "album": "Hyperdrama",
+    "isrc": "FR8EU2300090",
     "format": "ttml",
     "syncType": "richsync",
     "language": "en",
@@ -46,10 +45,10 @@ const SEARCH_RESPONSE = `{
   "success": true,
   "data": [
     {
-      "id": 4821,
-      "videoId": "dQw4w9WgXcQ",
-      "song": "Never Gonna Give You Up",
-      "artist": "Rick Astley",
+      "id": 13529,
+      "videoId": "Ugr4KKK_SqY",
+      "song": "Explorer",
+      "artist": "Justice, Connan Mockasin",
       "format": "ttml",
       "syncType": "richsync",
       "confidence": "high",
@@ -58,15 +57,28 @@ const SEARCH_RESPONSE = `{
   ]
 }`;
 
-const TRANSLATE_RESPONSE = `{
-  "lines": [
-    { "translation": "Hello", "romanization": "annyeonghaseyo", "needsTranslation": true },
-    { "translation": "Nice to meet you", "romanization": "bangapseumnida", "needsTranslation": true }
-  ],
-  "detectedLang": "ko",
-  "provider": "google-lyrics-translate",
-  "cached": false
-}`;
+const CACHE_TABS: { language: CodeLanguage; code: string }[] = [
+  {
+    language: 'curl',
+    code: `curl -i "${VIDEO_URL}" \\\n  -H 'If-None-Match: <the ETag you saved>'`,
+  },
+  {
+    language: 'javascript',
+    code: `const saved = store.get(videoId) // { etag, data } from an earlier fetch
+
+const res = await fetch(\`${BASE_URL}/lyrics?v=\${videoId}\`, {
+  headers: saved ? { "If-None-Match": saved.etag } : {},
+})
+
+if (res.status === 304) {
+  render(saved.data)
+} else if (res.ok) {
+  const { data } = await res.json()
+  store.set(videoId, { etag: res.headers.get("ETag"), data })
+  render(data)
+}`,
+  },
+];
 
 const ERROR_RESPONSE = `{
   "success": false,
@@ -82,7 +94,7 @@ const ERROR_RESPONSE = `{
     database of community-synced lyrics, the community-fed source Better Lyrics reads from. Each entry is
     keyed on a <code>videoId</code>. Reading from it needs no key and no sign-in. Every
     <code>/lyrics</code> response is wrapped as <code>{`{ success, data }`}</code>, so check
-    <code>success</code> before you touch <code>data</code>. Reads are rate limited to 120 requests per
+    <code>success</code> before you touch <code>data</code>. Reads are rate limited to 600 requests per
     minute per IP.
   </p>
 
@@ -106,7 +118,7 @@ if (success) {
 }` },
     { language: 'python', code: `import requests
 
-res = requests.get("${BASE_URL}/lyrics", params={"v": "dQw4w9WgXcQ"})
+res = requests.get("${BASE_URL}/lyrics", params={"v": "Ugr4KKK_SqY"})
 body = res.json()
 
 if body["success"]:
@@ -132,6 +144,16 @@ let body = reqwest::blocking::get(
 println!("{body}");` },
   ]} />
 
+  <h2>Attribution</h2>
+  <p>
+    Any app that shows Unison lyrics must credit Unison and the person who submitted them. Show
+    <code>Lyrics from Unison</code>, linked to <code>https://unison.betterlyrics.org/song/&lt;videoId&gt;</code>,
+    and the submitter's <code>submitter.displayName</code>, linked to
+    <code>https://unison.betterlyrics.org/curator/&lt;submitter.keyId&gt;</code>. Every lyric response
+    carries both. The credit can sit at the end of the lyrics. Apps have until 7 February 2027 to add it,
+    and after that, apps that don't show it may lose access to the API.
+  </p>
+
   <h2>Fetch by video</h2>
   <p>
     <code>GET /lyrics?v=&lt;videoId&gt;</code> returns the single best version for that video. The
@@ -141,13 +163,27 @@ println!("{body}");` },
   </p>
   <pre><code class="language-json">{VIDEO_RESPONSE}</code></pre>
 
-  <h2>Fetch by song and artist</h2>
+  <h2>Other ways to look up</h2>
+  <p>No video id? <code>GET /lyrics</code> also takes:</p>
+  <ul>
+    <li><code>isrc</code>, in any case, with hyphens optional.</li>
+    <li>
+      <code>spotify</code>, <code>apple_music</code> or <code>tidal</code>, a track id rather than a link.
+      Unison resolves it to an ISRC through BiniLink.
+    </li>
+    <li>
+      <code>song</code> and <code>artist</code>. <code>artist</code> matches any one credited name. Add
+      <code>album</code> or <code>duration</code> (seconds, ±2 s) to narrow it.
+    </li>
+  </ul>
   <p>
-    No video id? Look up by <code>song</code> and <code>artist</code> instead. Both are matched
-    case-insensitively. Add <code>album</code> or <code>duration</code> (seconds, matched within a
-    small tolerance) when a title has more than one recording.
+    Use <code>v</code> when you can: it's the fastest lookup. Without <code>v</code>, Unison falls back to
+    <code>isrc</code>, then Spotify / Apple Music / Tidal id, then <code>song</code> + <code>artist</code>,
+    and returns the first match. The fallbacks can take longer to answer. Every lookup except
+    <code>v</code> says how it matched in <code>matchedBy</code>: <code>isrc</code>,
+    <code>song_artist</code> or <code>linked_video</code>.
   </p>
-  <CodeTabs tabs={fetchTabs(SONG_ARTIST_URL)} />
+  <CodeTabs tabs={fetchTabs(ISRC_URL)} />
 
   <h2>Search</h2>
   <p>
@@ -168,66 +204,21 @@ println!("{body}");` },
   </p>
   <CodeTabs tabs={fetchTabs(VARIANTS_URL)} />
 
-  <h2>Translating lyrics</h2>
+  <h2>Caching</h2>
   <p>
-    <code>POST /translate</code> turns a block of lyrics into another language and romanizes it in one
-    call, so every client isn't hitting Google's rate-limited endpoint on its own. Send the
-    <code>lines</code> you want, the target language in <code>to</code>, and the source language in
-    <code>from</code>. Leave <code>from</code> out and Unison detects it, then echoes what it picked back
-    as <code>detectedLang</code>.
+    Keep the lyrics you fetch and check them before you download them again. A check is cheaper than a
+    full download for both Unison and your app, and your copy stays in sync with edits and new versions.
   </p>
-  <CodeTabs tabs={[
-    { language: 'curl', code: `curl -X POST "${TRANSLATE_URL}" \\
-  -H "content-type: application/json" \\
-  -d '{"lines":["안녕하세요","반갑습니다"],"to":"en","from":"ko"}'` },
-    { language: 'javascript', code: `const res = await fetch("${TRANSLATE_URL}", {
-  method: "POST",
-  headers: { "content-type": "application/json" },
-  body: JSON.stringify({ lines: ["안녕하세요", "반갑습니다"], to: "en", from: "ko" }),
-})
-const { lines, detectedLang } = await res.json()` },
-    { language: 'python', code: `import requests
-
-body = requests.post("${TRANSLATE_URL}", json={
-    "lines": ["안녕하세요", "반갑습니다"],
-    "to": "en",
-    "from": "ko",
-}).json()` },
-    { language: 'go', code: `payload := strings.NewReader(\`{"lines":["안녕하세요","반갑습니다"],"to":"en","from":"ko"}\`)
-res, err := http.Post("${TRANSLATE_URL}", "application/json", payload)
-if err != nil {
-    log.Fatal(err)
-}
-defer res.Body.Close()
-body, _ := io.ReadAll(res.Body)` },
-    { language: 'rust', code: `// reqwest = { version = "0.12", features = ["blocking", "json"] }
-let body = reqwest::blocking::Client::new()
-    .post("${TRANSLATE_URL}")
-    .json(&serde_json::json!({
-        "lines": ["안녕하세요", "반갑습니다"],
-        "to": "en",
-        "from": "ko",
-    }))
-    .send()?
-    .text()?;` },
-  ]} />
   <p>
-    Each line comes back with a <code>translation</code>, a <code>romanization</code> when the source
-    isn't already in the Latin alphabet, and a <code>needsTranslation</code> flag so you can leave lines
-    that were already in the target language alone. Answers are cached per lyrics-and-language pair, so
-    the same request only reaches Google once; a cache hit sets <code>cached</code> to
-    <code>true</code>. Blank lines and lone ♪ markers keep their place and come back empty.
+    Every <code>GET /lyrics</code> lookup sends an <code>ETag</code>. Save it with the lyric and send it
+    back as <code>If-None-Match</code>. If the lyric is the same, Unison answers
+    <code>304 Not Modified</code> with no body, and you use the copy you have.
   </p>
-  <pre><code class="language-json">{TRANSLATE_RESPONSE}</code></pre>
+  <CodeTabs tabs={CACHE_TABS} />
   <p>
-    When <code>from</code> and <code>to</code> are the same language there's nothing to do, so every
-    line comes back with a null <code>translation</code> and <code>needsTranslation</code> false instead
-    of a copy of the original. A request with no real lyric lines, or one where the source language
-    can't be worked out, returns <code>400</code>; more than 200 lines or an overlong line or language
-    code returns <code>422</code>; if Google is unreachable or rate limited you get <code>502</code> or
-    <code>503</code>. A transient failure isn't cached, but the same lines failing to parse three times
-    over is remembered as a negative and short-circuits to <code>502</code> for about a month so the
-    upstream isn't hammered.
+    The tag changes when someone edits the lyric or its song details, when the submitter changes their
+    name, or when another version moves to the top. Votes, confidence and the submitter's stats can change
+    under the same tag, so a saved copy may show old numbers.
   </p>
 
   <h2>Formats</h2>
@@ -247,9 +238,16 @@ let body = reqwest::blocking::Client::new()
   <h2>Errors and limits</h2>
   <p>
     Failed <code>/lyrics</code> calls keep the envelope with <code>success: false</code> plus a
-    <code>code</code> and a human-readable <code>error</code> and <code>hint</code>. Common ones are
-    <code>404</code> when nothing matches and <code>400</code> when the query is missing a required
-    param. Stay under 120 requests per minute per IP or you get <code>429</code>.
+    <code>code</code> and a human-readable <code>error</code> and <code>hint</code>. Common ones:
   </p>
+  <ul>
+    <li><code>404</code> when nothing matches.</li>
+    <li><code>400</code> when the query has no way to name the song.</li>
+    <li>
+      <code>503 LOOKUP_PENDING</code> with <code>Retry-After</code> while BiniLink matches a new track id.
+      Retry a few times, then give up.
+    </li>
+  </ul>
+  <p>Stay under 600 requests per minute per IP or you get <code>429</code>.</p>
   <pre><code class="language-json">{ERROR_RESPONSE}</code></pre>
 </DocsLayout>

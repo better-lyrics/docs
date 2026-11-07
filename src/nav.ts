@@ -54,7 +54,7 @@ export const navSections: NavSection[] = [
   {
     title: 'Unison',
     links: [
-      { href: '/unison', label: 'Fetching lyrics', description: 'Read community-synced lyrics from Unison by video id, song and artist, or search, and translate them. No key needed.' },
+      { href: '/unison', label: 'Fetching lyrics', description: 'Read community-synced lyrics from Unison by video id, ISRC, song and artist, or search. No key needed.' },
     ],
   },
   {
