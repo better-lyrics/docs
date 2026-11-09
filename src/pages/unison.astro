@@ -188,10 +188,10 @@ println!("{body}");` },
   <h3>If you use the database dump</h3>
   <p>
     The <a href="https://github.com/better-lyrics/unison#database-dump" target="_blank" rel="noopener noreferrer">dump</a> license (ODbL) requires the
-    Unison credit. The dump has no submitter column, so the submitter credit is our request rather than a
-    license term. Get the submitter with <code>GET /lyrics/&lt;id&gt;</code>, or link the lyric instead:
-    <code>https://unison.betterlyrics.org/song/&lt;video_id&gt;?variantId=&lt;id&gt;</code> shows who
-    submitted it.
+    Unison credit. The submitter credit is our request rather than a license term. A lyric's
+    <code>submitter_key_id</code>, when set, matches a row in <code>contributors</code>, which has the
+    submitter's <code>display_name</code> and <code>profile_url</code>. The lyric's <code>url</code> column links
+    to its page on Unison.
   </p>
 
   <h3>Good examples</h3>
